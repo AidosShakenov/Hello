@@ -5,10 +5,6 @@ const deckSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Need a deck name'],
     unique: true  
-  },
-  color: { 
-    type: String, 
-    required: [true, 'Need a deck color']
   }
 }); 
 
