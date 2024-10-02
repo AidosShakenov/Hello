@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const deckSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Need a deck name'],
+    required: true,
     unique: true  
   }
 }); 

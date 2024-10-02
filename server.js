@@ -7,8 +7,9 @@ const app = require('./app');
 
 const port = process.env.PORT || 3000;
 
+const DB = process.env.DATABASE;
 mongoose
-  .connect('mongodb+srv://aidos:M3mFOoR5SiwwKtjp@mtgdecks.lqyzq.mongodb.net/', {})
+  .connect(DB, {})
   .then(() => console.log('Connected to DB'));
 
 app.listen(port, () => {

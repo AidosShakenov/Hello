@@ -4,7 +4,8 @@
   "description": "Hello",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "author": "Aidos Shakenov",
   "license": "ISC",
@@ -12,6 +13,7 @@
     "body-parser": "^1.20.3",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "express-validator": "^7.2.0",
     "mongoose": "^8.7.0"
   },
   "engines": {
