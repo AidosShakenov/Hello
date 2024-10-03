@@ -1,5 +1,5 @@
 const express = require('express');
-const deckController = require('../controllers/deckController');
+const cardController = require('../controllers/cardController');
 const { body } = require('express-validator');
 
 const router = express.Router();
@@ -19,14 +19,14 @@ const validate = validations => {
 
 router
   .route('/')
-  .get(deckController.getAllDecks)
-  .post(validate([body('name').notEmpty()]), deckController.createDeck);
+  .get(cardController.getAllCards)
+  .post(validate([body('name').notEmpty()]), cardController.createCard);
 
 router
   .route('/:id')
-  .get(deckController.getDeck)
-  .patch(validate([body('name').notEmpty()]), deckController.updateDeck)
-  .delete(deckController.deleteDeck);
+  .get(cardController.getCard)
+  .patch(validate([body('name').notEmpty()]), cardController.updateCard)
+  .delete(cardController.deleteCard);
 
 
 module.exports = router;
