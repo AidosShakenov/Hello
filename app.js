@@ -1,9 +1,6 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const deckRouter = require('./routes/deckRoutes');
 const cardRouter = require('./routes/cardRoutes');
-const deckSchema = require('./models/deckModel');
-const bodyParser = require('body-parser');
 
 const app = express();
 

@@ -5,6 +5,16 @@ const cardSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true  
+  },
+  scryfallID: {
+    type: String,
+    required: true,
+    unique: true  
+  },
+  image: {
+    type: String, 
+    required: true,
+    unique: true 
   }
 }); 
 
