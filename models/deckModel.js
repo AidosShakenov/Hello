@@ -13,9 +13,9 @@ const deckSchema = new mongoose.Schema({
     enum: ['standard', 'modern', 'pioneer', 'legacy', 'vintage', 'commander']
   },
   cards: [{
-    type: mongoose.Schema.ObjectId,
-    ref: Card
-  }]
+    name: {type: String, required: true},
+    quantity: {type: Number, required: true, min:1, max:4},      
+  }]  
 }); 
 
 const Deck = mongoose.model('Deck', deckSchema);

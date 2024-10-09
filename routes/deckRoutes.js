@@ -8,7 +8,6 @@ const validate = validations => {
   return async (req, res, next) => {
     for (const validation of validations) {
       const result = await validation.run(req);
-      
       if (!result.isEmpty()) {
         return res.status(400).json({ errors: result.array() });
       }      
@@ -20,12 +19,12 @@ const validate = validations => {
 router
   .route('/')
   .get(deckController.getAllDecks)
-  .post(validate([body('name').notEmpty()]), deckController.createDeck);
+  .post(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.createDeck);
 
 router
   .route('/:id')
   .get(deckController.getDeck)
-  .patch(validate([body('name').notEmpty()]), deckController.updateDeck)
+  .patch(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.updateDeck)
   .delete(deckController.deleteDeck);
 
 

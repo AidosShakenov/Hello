@@ -3,6 +3,6 @@ const factory = require('./handlerFactory');
 
 exports.getAllDecks = factory.getAll(Deck);
 exports.createDeck = factory.createOneDeck(Deck);
-exports.getDeck = factory.getOne(Deck, { path: "cards", select: "name -_id"});
+exports.getDeck = factory.getOne(Deck);
 exports.deleteDeck = factory.deleteOne(Deck);
 exports.updateDeck = factory.updateOneDeck(Deck);
