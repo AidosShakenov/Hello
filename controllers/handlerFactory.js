@@ -19,11 +19,16 @@ exports.createOneDeck = Model =>
       if (req.body.cards[i].quantity > 4) {
         return next(new AppError(`You have more than 4 copies: ${req.body.cards[i].name}`, 400));
       };
-      //Проверка на легальность
+      
       let cardName = await req.body.cards[i].name;
       let nameSearch = cardName.replace(' ', '');
       const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`);
+      //Проверка на наличие такой карты в скрайфоле
+      if (response.data.total_cards !== 1) {
+        return next(new AppError(`Not correct name for card: ${req.body.cards[i].name}`, 400));
+      };
       cardName = response.data.data[0];
+      //Проверка на легальность
       if (cardName.legalities[req.body.format] === 'not_legal') {
         return next(new AppError(`You have not legal card: ${cardName.name}`, 400));
       };
