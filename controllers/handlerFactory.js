@@ -9,15 +9,25 @@ exports.createOneDeck = Model =>
     //Валидация на уникальность названия
     const nameFilter = await Model.find({ name: req.body.name });
     if (nameFilter.length > 0) {
-      return next(new AppError('You allready have document with that name!', 400));
+      return next(new AppError(res.status(400).json({message: 'You allready have document with that name!'}), 400));
     };
+    //Проверка формата
+    if(req.body.format !== 'standard' && 
+      req.body.format !== 'modern' && 
+      req.body.format !== 'pioneer' && 
+      req.body.format !== 'legacy' && 
+      req.body.format !== 'vintage' && 
+      req.body.format !== 'commander' && 
+      req.body.format !== 'pauper') {
+        return next(new AppError(res.status(400).json({message: 'Please enter correct format name!'}), 400))
+      };
 
     let count = 0;
     let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
       //Проверка на количество копий
       if (req.body.cards[i].quantity > 4) {
-        return next(new AppError(`You have more than 4 copies: ${req.body.cards[i].name}`, 400));
+        return next(new AppError(res.status(400).json({message: `You have more than 4 copies: ${req.body.cards[i].name}`}), 400));
       };
       
       let cardName = await req.body.cards[i].name;
@@ -25,17 +35,17 @@ exports.createOneDeck = Model =>
       const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`);
       //Проверка на наличие такой карты в скрайфоле
       if (response.data.total_cards !== 1) {
-        return next(new AppError(`Not correct name for card: ${req.body.cards[i].name}`, 400));
+        return next(new AppError(res.status(400).json({message: `Not correct card name: ${req.body.cards[i].name}`}), 400));
       };
       cardName = response.data.data[0];
       //Проверка на легальность
       if (cardName.legalities[req.body.format] === 'not_legal') {
-        return next(new AppError(`You have not legal card: ${cardName.name}`, 400));
+        return next(new AppError(res.status(400).json({message: `You have not legal card for ${req.body.format}: ${cardName.name}`}), 400));
       };
       //Проверка на количество карт. Не более 10
       count = count + req.body.cards[i].quantity;
       if (count > 10) {
-        return next(new AppError('You have more than 10 cards in your deck!', 400));
+        return next(new AppError(res.status(400).json({message: 'You have more than 10 cards in your deck!'}), 400));
       }
       //Проверка на наличие карты в БД и добавление в БД новых карт если их нет в БД
       const cardInDb = await Card.findOne({ name: cardName.name });
@@ -54,8 +64,9 @@ exports.createOneDeck = Model =>
 
     res.status(201).json({
       status: 'success',
-      data: doc,
-      newCardsInDB: newCards
+      deckID: doc.id,
+      name: doc.name,      
+      addedCardsInDB: newCards
     });
   });
 
@@ -82,13 +93,13 @@ exports.getOne = Model =>
   catchAsync(async (req, res, next) => {
 
     if (req.params.id.length !== 24) {
-      return next(new AppError('Invalid ID, please enter valid ID', 400));
+      return next(new AppError(res.status(400).json({message: 'Invalid ID, please enter valid ID'}), 400));
     }
     
     const doc = await Model.findById(req.params.id);
 
     if (!doc) {
-      return next(new AppError('No document found with that ID', 404));
+      return next(new AppError(res.status(404).json({message: 'No document found with that ID'}), 404));
     };
 
     res.status(200).json({
@@ -106,7 +117,7 @@ exports.deleteOne = Model =>
     const doc = await Model.findByIdAndDelete(req.params.id);
 
     if (!doc) {
-      return next(new AppError('No document found with that ID', 404));
+      return next(new AppError(res.status(404).json({message: 'No document found with that ID'}), 404));
     }
 
     res.status(204).json({
@@ -120,28 +131,43 @@ exports.updateOneDeck = Model =>
     //Валидация на уникальность названия
     const nameFilter = await Model.find({ name: req.body.name });
     if (nameFilter.length > 0) {
-      return next(new AppError('You allready have document with that name!', 400));
+      return next(new AppError(res.status(400).json({message: 'You allready have document with that name!'}), 400));
     };
+    //Проверка формата
+    if(req.body.format !== 'standard' && 
+      req.body.format !== 'modern' && 
+      req.body.format !== 'pioneer' && 
+      req.body.format !== 'legacy' && 
+      req.body.format !== 'vintage' && 
+      req.body.format !== 'commander' && 
+      req.body.format !== 'pauper') {
+        return next(new AppError(res.status(400).json({message: 'Please enter correct format name!'}), 400))
+      };
 
     let count = 0;
     let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
       //Проверка на количество копий
       if (req.body.cards[i].quantity > 4) {
-        return next(new AppError(`You have more than 4 copies: ${req.body.cards[i].name}`, 400));
+        return next(new AppError(res.status(400).json({message: `You have more than 4 copies: ${req.body.cards[i].name}`}), 400));
       };
-      //Проверка на легальность
+      
       let cardName = await req.body.cards[i].name;
       let nameSearch = cardName.replace(' ', '');
       const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`);
+      //Проверка на наличие такой карты в скрайфоле
+      if (response.data.total_cards !== 1) {
+        return next(new AppError(res.status(400).json({message: `Not correct card name: ${req.body.cards[i].name}`}), 400));
+      };
       cardName = response.data.data[0];
+      //Проверка на легальность
       if (cardName.legalities[req.body.format] === 'not_legal') {
-        return next(new AppError(`You have not legal card: ${cardName.name}`, 400));
+        return next(new AppError(res.status(400).json({message: `You have not legal card for ${req.body.format}: ${cardName.name}`}), 400));
       };
       //Проверка на количество карт. Не более 10
       count = count + req.body.cards[i].quantity;
       if (count > 10) {
-        return next(new AppError('You have more than 10 cards in your deck!', 400));
+        return next(new AppError(res.status(400).json({message: 'You have more than 10 cards in your deck!'}), 400));
       }
       //Проверка на наличие карты в БД и добавление в БД новых карт если их нет в БД
       const cardInDb = await Card.findOne({ name: cardName.name });
@@ -166,7 +192,8 @@ exports.updateOneDeck = Model =>
 
     res.status(201).json({
       status: 'success',
-      data: doc,
-      newCardsInDB: newCards
+      deckID: doc.id,
+      name: doc.name,      
+      addedCardsInDB: newCards
     });
   });

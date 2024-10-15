@@ -10,7 +10,7 @@ const deckSchema = new mongoose.Schema({
   format: {
     type: String,
     required: true,
-    enum: ['standard', 'modern', 'pioneer', 'legacy', 'vintage', 'commander']
+    enum: ['standard', 'modern', 'pioneer', 'legacy', 'vintage', 'commander', 'pauper']
   },
   cards: [{
     name: {type: String, required: true},
