@@ -22,10 +22,17 @@ router
   .post(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.createDeck);
 
 router
+  .route('/fromDate/:fromDate/toDate/:toDate/format/:format')
+  .get(deckController.getFromToDate);
+
+router
+  .route('/newdeck/:format')
+  .get(deckController.deckJson);
+
+router
   .route('/:id')
   .get(deckController.getDeck)
   .patch(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.updateDeck)
   .delete(deckController.deleteDeck);
-
 
 module.exports = router;
