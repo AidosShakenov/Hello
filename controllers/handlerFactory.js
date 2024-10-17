@@ -7,7 +7,9 @@ const moment = require('moment-timezone');
 
 exports.createOneDeck = Model =>
   catchAsync(async (req, res, next) => {
-    
+    if (req.body.name === '') {
+      return res.status(400).json({message: 'Deck name cannot be empty'});
+    };
     //Проверка формата
     if(req.body.format !== 'standard' && 
        req.body.format !== 'modern' && 

@@ -19,6 +19,9 @@ const validate = validations => {
 router
   .route('/')
   .post(deckController.getAllDecks)
+
+router
+  .route('/newdeck')
   .post(deckController.createDeck);
 
 router
