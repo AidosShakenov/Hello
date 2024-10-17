@@ -1,11 +1,9 @@
 const mongoose = require('mongoose');
-const Card = require('../models/cardModel');
 
 const deckSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    unique: true  
+    required: true    
   },
   format: {
     type: String,

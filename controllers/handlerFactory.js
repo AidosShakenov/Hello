@@ -5,55 +5,48 @@ const axios = require('axios');
 const Card = require('../models/cardModel');
 const moment = require('moment-timezone');
 
-exports.deckJson = Model => 
-  catchAsync(async (req, res, next) => {
-    if (req.params.format === undefined) {
-      return res.status(200).json({message: 'Enter new deck format in query, valid formats are: standard, modern, pioneer, legacy, vintage, pauper'});
-    };
-    if (
-      req.params.format === 'standard' || req.params.format === 'modern' || req.params.format === 'pioneer' || 
-      req.params.format === 'legacy' || req.params.format === 'vintage' || req.params.format === 'pauper') {
-        const deck = await Model.findOne({ format: req.params.format });
-        if (!deck) {
-          return res.status(404).json({message: `We not found json for ${req.params.format}. Please ask admin for add`});
-        };
-        return res.status(200).json({
-          message: `Use that example for creating a new deck for ${req.params.format}`,
-          example: ({
-            name: deck.name,
-            format: deck.format,
-            cards: deck.cards.map(cards => ({
-              name: cards.name,
-              quantity: cards.quantity
-            }))})
-        });
-    } else {
-      return res.status(400).json({message: 'Invalid format name, valid formats are: standard, modern, pioneer, legacy, vintage, pauper'});
-    }
-  });
-
-
-
 exports.createOneDeck = Model =>
   catchAsync(async (req, res, next) => {
-    //Валидация на уникальность названия
-    const nameFilter = await Model.find({ name: req.body.name });
-    if (nameFilter.length > 0) {
-      return res.status(400).json({message: 'You allready have document with that name!'});
-    };
+    
     //Проверка формата
-    if(req.body.format !== 'standard' && 
-      req.body.format !== 'modern' && 
-      req.body.format !== 'pioneer' && 
-      req.body.format !== 'legacy' && 
-      req.body.format !== 'vintage' && 
-      req.body.format !== 'pauper') {
-        return res.status(400).json({
-          message: 'Please enter correct format name!',
-          reason: 'Valid formats are: standard, modern, pioneer, legacy, vintage, pauper'
-        })
-      };
-
+    if(req.body.name === '') {
+      const features = new APIFeatures(Model.find(), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+    const docs = await features.query;
+    
+    res.status(200).json({
+      status: 'success',
+      results: docs.length,
+      data: docs.map (docs =>({
+        name: docs.name,
+        format: docs.format,
+        //created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+        id: docs.id
+      }))
+    })
+    } else if(req.body.format !== 'standard' && 
+              req.body.format !== 'modern' && 
+              req.body.format !== 'pioneer' && 
+              req.body.format !== 'legacy' && 
+              req.body.format !== 'vintage' && 
+              req.body.format !== 'pauper') {
+                const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper']
+                return res.status(200).json({ 
+                  formats: formats
+                })
+              } else if (req.body.cards.length === 0) {
+                  const doc = await Model.findOne();
+                  return res.status(200).json({ 
+                    cards: doc.cards.map(cards => ({
+                      name: cards.name,
+                      quantity: cards.quantity
+                    }))
+                  })
+                }
+   
     let count = 0;
     let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
@@ -66,9 +59,12 @@ exports.createOneDeck = Model =>
       let nameSearch = cardName.replace(' ', '');
       const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`);
       //Проверка на наличие такой карты в скрайфоле
-      if (response.data.total_cards !== 1) {
-        return res.status(400).json({message: `Not correct card name: ${req.body.cards[i].name}`});
-      };
+      if (response.data.total_cards > 1) {
+        return res.status(400).json({
+          message: `We found multiple cards with your card name '${req.body.cards[i].name}', please use one of folowing cards`,
+          cards: response.data.data.map(card => card.name)
+        });
+      } 
       cardName = response.data.data[0];
       //Проверка на легальность
       if (cardName.legalities[req.body.format] === 'not_legal') {
@@ -105,23 +101,27 @@ exports.createOneDeck = Model =>
 
 exports.getAll = Model =>
   catchAsync(async (req, res, next) => {
-    const features = new APIFeatures(Model.find(), req.query)
-      .filter()
-      .sort()
-      .limitFields()
-      .paginate();
-    const docs = await features.query;
-    
+    console.log(req.body.cards.length);
     res.status(200).json({
-      status: 'success',
-      results: docs.length,
-      data: docs.map (docs =>({
-        name: docs.name,
-        format: docs.format,
-        created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
-        id: docs.id
-      }))
-    });
+      status: 'OK'
+    })
+    // const features = new APIFeatures(Model.find(), req.query)
+    //   .filter()
+    //   .sort()
+    //   .limitFields()
+    //   .paginate();
+    // const docs = await features.query;
+    
+    // res.status(200).json({
+    //   status: 'success',
+    //   results: docs.length,
+    //   data: docs.map (docs =>({
+    //     name: docs.name,
+    //     format: docs.format,
+    //     created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+    //     id: docs.id
+    //   }))
+    // });
   });
 
 exports.getFromToDate = Model =>

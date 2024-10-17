@@ -19,15 +19,11 @@ const validate = validations => {
 router
   .route('/')
   .get(deckController.getAllDecks)
-  .post(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.createDeck);
+  .post(deckController.createDeck);
 
 router
   .route('/fromDate/:fromDate/toDate/:toDate/format/:format')
   .get(deckController.getFromToDate);
-
-router
-  .route('/newdeck/:format')
-  .get(deckController.deckJson);
 
 router
   .route('/:id')
