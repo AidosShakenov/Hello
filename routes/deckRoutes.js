@@ -18,12 +18,8 @@ const validate = validations => {
 
 router
   .route('/')
-  .get(deckController.getAllDecks)
+  .post(deckController.getAllDecks)
   .post(deckController.createDeck);
-
-router
-  .route('/fromDate/:fromDate/toDate/:toDate/format/:format')
-  .get(deckController.getFromToDate);
 
 router
   .route('/:id')

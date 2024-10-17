@@ -6,4 +6,3 @@ exports.createDeck = factory.createOneDeck(Deck);
 exports.getDeck = factory.getOne(Deck);
 exports.deleteDeck = factory.deleteOne(Deck);
 exports.updateDeck = factory.updateOneDeck(Deck);
-exports.getFromToDate = factory.getFromToDate(Deck);

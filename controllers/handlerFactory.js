@@ -9,44 +9,26 @@ exports.createOneDeck = Model =>
   catchAsync(async (req, res, next) => {
     
     //Проверка формата
-    if(req.body.name === '') {
-      const features = new APIFeatures(Model.find(), req.query)
-      .filter()
-      .sort()
-      .limitFields()
-      .paginate();
-    const docs = await features.query;
-    
-    res.status(200).json({
-      status: 'success',
-      results: docs.length,
-      data: docs.map (docs =>({
-        name: docs.name,
-        format: docs.format,
-        //created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
-        id: docs.id
-      }))
-    })
-    } else if(req.body.format !== 'standard' && 
-              req.body.format !== 'modern' && 
-              req.body.format !== 'pioneer' && 
-              req.body.format !== 'legacy' && 
-              req.body.format !== 'vintage' && 
-              req.body.format !== 'pauper') {
-                const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper']
-                return res.status(200).json({ 
-                  formats: formats
-                })
-              } else if (req.body.cards.length === 0) {
-                  const doc = await Model.findOne();
-                  return res.status(200).json({ 
-                    cards: doc.cards.map(cards => ({
-                      name: cards.name,
-                      quantity: cards.quantity
-                    }))
-                  })
-                }
-   
+    if(req.body.format !== 'standard' && 
+       req.body.format !== 'modern' && 
+       req.body.format !== 'pioneer' && 
+       req.body.format !== 'legacy' && 
+       req.body.format !== 'vintage' && 
+       req.body.format !== 'pauper') {
+         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
+         return res.status(200).json({ 
+           formats: formats
+         })
+       } else if (req.body.cards.length === 0) {
+           const doc = await Model.findOne();
+           return res.status(200).json({ 
+             cards: doc.cards.map(cards => ({
+               name: cards.name,
+               quantity: cards.quantity
+             }))
+           })
+         }
+
     let count = 0;
     let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
@@ -101,77 +83,247 @@ exports.createOneDeck = Model =>
 
 exports.getAll = Model =>
   catchAsync(async (req, res, next) => {
-    console.log(req.body.cards.length);
-    res.status(200).json({
-      status: 'OK'
-    })
-    // const features = new APIFeatures(Model.find(), req.query)
-    //   .filter()
-    //   .sort()
-    //   .limitFields()
-    //   .paginate();
-    // const docs = await features.query;
+    const {fromDate, toDate, format } = req.body;
     
-    // res.status(200).json({
-    //   status: 'success',
-    //   results: docs.length,
-    //   data: docs.map (docs =>({
-    //     name: docs.name,
-    //     format: docs.format,
-    //     created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
-    //     id: docs.id
-    //   }))
-    // });
-  });
+    if (!fromDate && !toDate && !format) {
+      const features = new APIFeatures(Model.find(), req.query)
+        .filter()
+        .sort()
+        .limitFields()
+        .paginate();
+      const docs = await features.query;
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      });
+    }  
 
-exports.getFromToDate = Model =>
-  catchAsync(async (req, res, next) => {
-    const {fromDate, toDate, format } = req.params;
-    
-    if (fromDate.length !== 17 || toDate.length !== 17) {
-      return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
-    }
-
-    if(format !== 'standard' && 
-      format !== 'modern' && 
-      format !== 'pioneer' && 
-      format !== 'legacy' && 
-      format !== 'vintage' && 
-      format !== 'pauper') {
-        return res.status(400).json({
-          message: 'Please use correct format name!',
-          reason: 'Valid formats are: standard, modern, pioneer, legacy, vintage, pauper'
-        })
-      };
-
-    const fromDateArray = fromDate.split(/\.|\, |\:/).map(Number);
-    const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
-
-    for (let i = 0; i < fromDateArray.length; i++) {
-      if (isNaN(fromDateArray[i]) || isNaN(toDateArray[i])) {
+    if (fromDate && toDate && format) {
+      if (fromDate.length !== 17 || toDate.length !== 17) {
         return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
       }
-    };
+  
+      if(format !== 'standard' && 
+        format !== 'modern' && 
+        format !== 'pioneer' && 
+        format !== 'legacy' && 
+        format !== 'vintage' && 
+        format !== 'pauper') {
+          const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
+          return res.status(200).json({ 
+            formats: formats
+          })
+        };
+  
+      const fromDateArray = fromDate.split(/\.|\, |\:/).map(Number);
+      const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
+  
+      for (let i = 0; i < fromDateArray.length; i++) {
+        if (isNaN(fromDateArray[i]) || isNaN(toDateArray[i])) {
+          return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+        }
+      };
+  
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+      const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
+      
+      const docs = await Model.find({ createdAt: { $gte: fd, $lte: td }, format: `${format}`});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
 
-    const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
-    const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
+    if (fromDate && toDate && !format) {
+      if (fromDate.length !== 17 || toDate.length !== 17) {
+        return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+      }
+  
+      const fromDateArray = fromDate.split(/\.|\, |\:/).map(Number);
+      const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
+  
+      for (let i = 0; i < fromDateArray.length; i++) {
+        if (isNaN(fromDateArray[i]) || isNaN(toDateArray[i])) {
+          return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+        }
+      };
+  
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+      const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
+      
+      const docs = await Model.find({ createdAt: { $gte: fd, $lte: td }});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
+    if (fromDate && !toDate && !format) {
+      if (fromDate.length !== 17) {
+        return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+      }
+      
+      const fromDateArray = fromDate.split(/\.|\, |\:/).map(Number);
     
-    const docs = await Model.find({ createdAt: { $gte: fd, $lte: td }, format: `${format}`});
+      for (let i = 0; i < fromDateArray.length; i++) {
+        if (isNaN(fromDateArray[i])) {
+          return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+        }
+      };
+  
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+            
+      const docs = await Model.find({ createdAt: { $gte: fd}});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
+    if (!fromDate && toDate && !format) {
+      if (toDate.length !== 17) {
+        return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+      }
+  
+      const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
+  
+      for (let i = 0; i < toDateArray.length; i++) {
+        if (isNaN(isNaN(toDateArray[i]))) {
+          return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+        }
+      };
+      
+      const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
+      
+      const docs = await Model.find({ createdAt: {$lte: td }});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
+    
+    if (!fromDate && !toDate && format) {
+      if(format !== 'standard' && 
+        format !== 'modern' && 
+        format !== 'pioneer' && 
+        format !== 'legacy' && 
+        format !== 'vintage' && 
+        format !== 'pauper') {
+          const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
+          return res.status(200).json({ 
+            formats: formats
+          })
+        };
+  
+      const docs = await Model.find({format: `${format}`});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
+    if (!fromDate && toDate && format) {
+      if (toDate.length !== 17) {
+        return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+      }
+  
+      if(format !== 'standard' && 
+        format !== 'modern' && 
+        format !== 'pioneer' && 
+        format !== 'legacy' && 
+        format !== 'vintage' && 
+        format !== 'pauper') {
+          const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
+          return res.status(200).json({ 
+            formats: formats
+          })
+        };
+ 
+      const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
+  
+      for (let i = 0; i < toDateArray.length; i++) {
+        if (isNaN(toDateArray[i])) {
+          return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
+        }
+      };
 
-    if (docs.length === 0) {
-      return res.status(200).json({message: 'No documents found between this date range'});
-    };
-    
-    res.status(200).json({
-      status: 'success',
-      results: docs.length,
-      data: docs.map (docs =>({
-        name: docs.name,
-        format: docs.format,
-        created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
-        id: docs.id
-      }))
-    })
+      const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
+      
+      const docs = await Model.find({ createdAt: { $lte: td }, format: `${format}`});
+  
+      if (docs.length === 0) {
+        return res.status(200).json({message: 'No documents found between this date range'});
+      };
+      
+      res.status(200).json({
+        status: 'success',
+        results: docs.length,
+        data: docs.map (docs =>({
+          name: docs.name,
+          format: docs.format,
+          created: moment(docs.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+          id: docs.id
+        }))
+      })
+    }
   });
 
 exports.getOne = Model =>
