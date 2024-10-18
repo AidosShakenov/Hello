@@ -5,10 +5,10 @@ const router = express.Router();
 
 router
   .route('/')
-  .get(cardController.getAllCards);
+  .post(cardController.newCard);
 
 router
- .route('/newcard')
- .post(cardController.newCard);
+  .route('/newcard')
+  .post(cardController.createCard);
   
 module.exports = router;

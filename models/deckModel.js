@@ -15,7 +15,7 @@ const deckSchema = new mongoose.Schema({
     default: Date.now
   },
   cards: [{
-    name: {type: String, required: true},
+    scryfallId: {type: String, required: true},
     quantity: {type: Number, required: true, min:1, max:4},      
   }]  
 }); 

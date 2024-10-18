@@ -6,7 +6,7 @@ const cardSchema = new mongoose.Schema({
     required: true,
     unique: true  
   },
-  scryfallID: {
+  scryfallId: {
     type: String,
     required: true,
     unique: true  
