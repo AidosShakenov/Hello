@@ -18,11 +18,16 @@ const validate = validations => {
 
 router
   .route('/')
-  .post(deckController.getAllDecks)
+  .post(deckController.getAllDecks);
 
 router
   .route('/newdeck')
   .post(deckController.createDeck);
+
+router
+  .route('/newdeck/formats')
+  .get(deckController.getFormats);
+
 
 router
   .route('/:id')
