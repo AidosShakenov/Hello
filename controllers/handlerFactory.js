@@ -2,8 +2,6 @@ const catchAsync = require('./../utils/catchAsync');
 const axios = require('axios');
 const Card = require('../models/cardModel');
 const moment = require('moment-timezone');
-const dotenv = require('dotenv');
-dotenv.config({ path: '../config.env'});
 
 exports.createCard = Model =>
   catchAsync(async (req, res, next) => {
@@ -76,7 +74,7 @@ exports.newCard = Model =>
 
 exports.getFormats = () => 
   catchAsync(async (req, res, next) => {
-    const formats = process.env.FORMATS.split(', ');
+    const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
     return res.status(200).json({ 
       formats: formats
     })
@@ -87,7 +85,7 @@ exports.createOneDeck = Model =>
     if (req.body.name === '') { // проверка на пустое имя
       return res.status(400).json({message: 'Deck name cannot be empty'});
     };
-    if(process.env.FORMATS.includes(req.body.format) && req.body.format !== '') { //проверка введено ли корректное название формата
+    if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') { //проверка введено ли корректное название формата
       if (req.body.cards.length === 0) {
         const doc = await Model.findOne({format: req.body.format});
         return res.status(200).json({ 
@@ -145,7 +143,7 @@ exports.createOneDeck = Model =>
         });
       };
     } else {
-        const formats = process.env.FORMATS.split(', ');
+        const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(200).json({ 
           formats: formats
         })
@@ -164,7 +162,7 @@ exports.getAll = Model =>
       if(fromDate.length !== 17 || toDate.length !== 17) {
         return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
       }
-      if(process.env.FORMATS.includes(req.body.format) && req.body.format !== '') {} else {
+      if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
           const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
           return res.status(200).json({ 
             formats: formats
@@ -233,7 +231,7 @@ exports.getAll = Model =>
     }
     // Только поле формат
     if (!fromDate && !toDate && format) {
-      if(process.env.FORMATS.includes(req.body.format) && req.body.format !== '') {} else {
+      if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(200).json({ 
           formats: formats
@@ -249,7 +247,7 @@ exports.getAll = Model =>
       if (toDate.length !== 17) {
         return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
       }
-      if(process.env.FORMATS.includes(req.body.format) && req.body.format !== '') {} else {
+      if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(200).json({ 
           formats: formats
@@ -271,7 +269,7 @@ exports.getAll = Model =>
       if (fromDate.length !== 17) {
         return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
       }
-      if(process.env.FORMATS.includes(req.body.format) && req.body.format !== '') {} else {
+      if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(200).json({ 
           formats: formats
