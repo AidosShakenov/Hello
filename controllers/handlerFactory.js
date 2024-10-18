@@ -96,7 +96,7 @@ exports.createOneDeck = Model =>
             quantity: cards.quantity
           }))
         })
-      } else {
+      } else {git
         let count = 0;
         let newCards = [];
         for (let i = 0; i < req.body.cards.length; i++) {
@@ -112,7 +112,6 @@ exports.createOneDeck = Model =>
           } 
           //Проверка на наличие такой карты в скрайфоле
           cardName = response.data;
-          console.log(cardName);
           //Проверка на легальность
           if (cardName.legalities[req.body.format] === 'not_legal') {
             return res.status(400).json({message: `You have not legal card for ${req.body.format}: ${cardName.name}`});
@@ -346,40 +345,30 @@ exports.deleteOne = Model =>
 
 exports.updateOneDeck = Model =>
   catchAsync(async (req, res, next) => {
-    //Валидация на уникальность названия
-    const nameFilter = await Model.find({ name: req.body.name });
-    if (nameFilter.length > 0) {
-      return res.status(400).json({message: 'You allready have document with that name!'});
+    if (req.body.name === '') { // проверка на пустое имя
+      return res.status(400).json({message: 'Deck name cannot be empty'});
     };
-    //Проверка формата
-    if(req.body.format !== 'standard' && 
-      req.body.format !== 'modern' && 
-      req.body.format !== 'pioneer' && 
-      req.body.format !== 'legacy' && 
-      req.body.format !== 'vintage' && 
-      req.body.format !== 'pauper') {
-        return res.status(400).json({
-          message: 'Please enter correct format name!',
-          reason: 'Valid formats are: standard, modern, pioneer, legacy, vintage, pauper'
-        })
-      };
-
+    const deck = await Model.findById(req.params.id);
+    if (req.body.cards.length === 0) {
+      return res.status(400).json({message: 'No cards'})
+    }
     let count = 0;
     let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
-      //Проверка на количество копий
+      //Проверка на количество 
       if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
         return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
-      
-      let cardName = await req.body.cards[i].name;
-
-      const response = await axios.get(`https://api.scryfall.com/cards/${req.body.cards[i].scryfallId}`);
+      const response = await axios.get(`https://api.scryfall.com/cards/${req.body.cards[i].scryfallId}`, {validateStatus: false});
+      //проверка на ошибочное введение
+      if (response.status !== 200) {
+        return res.status(404).json({message: `We not found cards with your scryfall ID '${req.body.cards[i].scryfallId}'`});
+      } 
       //Проверка на наличие такой карты в скрайфоле
       cardName = response.data;
       //Проверка на легальность
       if (cardName.legalities[req.body.format] === 'not_legal') {
-        return res.status(400).json({message: `You have not legal card for ${req.body.format}: ${cardName.name}`});
+        return res.status(400).json({message: `You have not legal card for ${deck.format}: ${cardName.name}`});
       };
       //Проверка на количество карт. Не более 10
       count = count + req.body.cards[i].quantity;
@@ -391,7 +380,7 @@ exports.updateOneDeck = Model =>
       if (!cardInDb) {
         await Card.create({
           name: cardName.name,
-          scryfallID: cardName.id,
+          scryfallId: cardName.id,
           image: cardName.image_uris.normal
         });
         newCards.push(cardName.name)
@@ -410,7 +399,10 @@ exports.updateOneDeck = Model =>
     res.status(201).json({
       status: 'success',
       deckId: doc.id,
-      name: doc.name,      
+      name: doc.name,
+      format: doc.format,
+      created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT'),      
       addedCardsInDB: newCards
     });
   });
+  

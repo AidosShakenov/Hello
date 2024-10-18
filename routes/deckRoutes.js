@@ -32,7 +32,7 @@ router
 router
   .route('/:id')
   .get(deckController.getDeck)
-  .patch(validate([body('name').notEmpty()]), validate([body('format').notEmpty()]), deckController.updateDeck)
+  .patch(deckController.updateDeck)
   .delete(deckController.deleteDeck);
 
 module.exports = router;
