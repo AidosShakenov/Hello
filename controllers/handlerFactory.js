@@ -304,7 +304,7 @@ exports.getOne = Model =>
       return res.status(400).json({message: 'Invalid ID, please enter valid ID or use newdeck/<formatName>'});
     }
    
-    const doc = await Model.findById(req.params.id).populate('cards.card');
+    const doc = await Model.findById(req.params.id).populate('cards.cardId');
 
     if (!doc) {
       return res.status(404).json({message: 'No document found with that ID'});
@@ -316,7 +316,7 @@ exports.getOne = Model =>
       format: doc.format,
       created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
       cards: doc.cards.map(cards => ({
-        name: cards.card.name,
+        name: cards.cardId.name,
         quantity: cards.quantity
       }))
     });
@@ -330,7 +330,7 @@ exports.deleteOne = Model =>
       return res.status(404).json({message: 'No document found with that ID'});
     }
 
-    res.status(204).json({
+    res.status(200).json({
       status: 'success',
       message: 'Document deleted successfully'
     });

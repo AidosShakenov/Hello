@@ -16,7 +16,7 @@ const deckSchema = new mongoose.Schema({
     default: Date.now
   },
   cards: [{
-    card: {
+    cardId: {
       ref: 'Card',
       type: mongoose.Schema.ObjectId
     },
