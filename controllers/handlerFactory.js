@@ -74,12 +74,16 @@ exports.createCard = Model =>
     if (response.status!== 200) {
       return next(res.status(404).json({message: `We not found card with that ID`}));
     }
-    
     const cardName = response.data;
+    let images = '';
+    if (!cardName.image_uris) {
+      images = cardName.card_faces[0].image_uris.normal + ' // ' + cardName.card_faces[1].image_uris.normal
+    } else {images = cardName.image_uris.normal}
+    
     const newCard = await Model.create({
       name: cardName.name,
       scryfallId: cardName.id,
-      image: cardName.image_uris.normal
+      image: images
     });
 
     return res.status(200).json({
