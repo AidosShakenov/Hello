@@ -123,6 +123,7 @@ exports.createOneDeck = Model =>
       return res.status(400).json({message: 'You must have at least one card in deck'});
     }
     let count = 0;
+    let duplicates = [];
     const cards = req.body.cards;
     for (let i = 0; i < req.body.cards.length; i++) {
       let card = cards[i];
@@ -148,6 +149,11 @@ exports.createOneDeck = Model =>
       if (count > 10) {
         return res.status(400).json({message: 'You have more than 10 cards in your deck!'});
       }
+      if(duplicates.includes(card.cardId)) {
+        return res.status(400).json({message: `You can't have duplicate cards in your deck!`});
+      }
+      duplicates.push(card.cardId);
+      
     }
     
     const doc = await Model.create(req.body);
