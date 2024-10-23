@@ -3,6 +3,57 @@ const axios = require('axios');
 const Card = require('../models/cardModel');
 const moment = require('moment-timezone');
 
+//Поиск карты
+exports.newCard = Model => 
+  catchAsync(async (req, res, next) => {
+    if (req.body.name === '') { // проверка на пустое имя
+      const cards = await Model.find();
+      return res.status(200).json({
+        result: cards.length,
+        cards: cards.map(cards => ({
+          name: cards.name,
+          mongoId: cards._id,
+          scryfallId: cards.scryfallId
+        })) 
+      });
+    };
+    let nameSearch = req.body.name.replace(' ', '');
+    const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`, {validateStatus: false});
+    //проверка на ошибочное введение
+    if (response.status !== 200) {
+      return next(res.status(404).json({message: `We not found cards with your card name '${req.body.name}'`}));
+    } 
+    let cards = response.data.data;
+    if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format)) {
+      cards = [];
+      for(let i = 0; i < response.data.total_cards; i++) {
+        if (response.data.data[i].legalities[req.body.format] === "legal") {
+          cards.push(response.data.data[i])
+        }}
+      if (cards.length < 1) {
+        return next(res.status(404).json({ messege: `Not found cards named '${req.body.name}' in '${req.body.format}' format`}))
+      }
+    } else if (req.body.format !== '') {
+      return next(res.status(400).json({ 
+        message: `Please use correct 'format' name or empty 'format' field`, 
+        formatNames: `standard, pioneer, modern, legacy, vintage, pauper`
+      }))
+    }
+    let cardsInDb = await Model.find({ scryfallId: { $in: cards.map(card => card.id)}});
+    return res.status(200).json({
+      cards: cards.map(cards => ({
+        name: cards.name,
+        scryfallId: cards.id
+      })),
+      cardsInDb: cardsInDb.map(cardsInDb => ({
+        name: cardsInDb.name,
+        scryfallId: cardsInDb.scryfallId,
+        id: cardsInDb._id
+      }))
+    })
+  });
+
+// Добавление карты в базу
 exports.createCard = Model =>
   catchAsync(async (req, res, next) => {
     if (req.body.scryfallId.length !==36) {
@@ -13,6 +64,7 @@ exports.createCard = Model =>
       return res.status(200).json({
         message: `You allready have ${card[0].name} in DB`,
         name: card[0].name,
+        mongoId: card[0]._id,
         scryfallId: card[0].scryfallId,
         image: card[0].image
       })
@@ -30,47 +82,13 @@ exports.createCard = Model =>
     });
 
     return res.status(200).json({
-      message: `New card ${cardName.name} added in DB`,
+      message: `NEW CARD! ${cardName.name} added in DB`,
       name: newCard.name,
+      mongoId: newCard._id,
       scryfallId: newCard.scryfallId,
       image: newCard.image
     })
   })
-
-exports.newCard = Model =>
-  catchAsync(async (req, res, next) => {
-    if (req.body.name === '') { // проверка на пустое имя
-      const cards = await Model.find();
-      return res.status(200).json({
-        result: cards.length,
-        cards: cards.map(cards => ({
-          name: cards.name,
-          scryfallId: cards.scryfallId,
-          image: cards.image
-        })) 
-      });
-    };
-    let cardName = await req.body.name;
-    let nameSearch = cardName.replace(' ', '');
-    const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`, {validateStatus: false});
-    //проверка на ошибочное введение
-    if (response.status !== 200) {
-      return next(res.status(404).json({message: `We not found cards with your card name '${req.body.name}'`}));
-    } 
-    //Проверка на наличие такой карты в скрайфоле
-    if (response.data.total_cards > 1) {
-      return res.status(400).json({
-        cards: response.data.data.map(card => card.name)
-      });
-    }
-    cardName = response.data.data[0];
-    res.status(201).json({
-      name: cardName.name,
-      scryFallId: cardName.id,
-      image: cardName.image_uris.normal
-    });
-    
-  });
 
 exports.getFormats = () => 
   catchAsync(async (req, res, next) => {
@@ -82,72 +100,44 @@ exports.getFormats = () =>
 
 exports.createOneDeck = Model =>
   catchAsync(async (req, res, next) => {
-    if (req.body.name === '') { // проверка на пустое имя
-      return res.status(400).json({message: 'Deck name cannot be empty'});
+    // проверка на пустое имя
+    if (req.body.name === '') { 
+      return next(res.status(400).json({message: 'Deck name cannot be empty'}));
     };
-    if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') { //проверка введено ли корректное название формата
-      if (req.body.cards.length === 0) {
-        const doc = await Model.findOne({format: req.body.format});
-        return res.status(200).json({ 
-          cards: doc.cards.map(cards => ({
-            name: cards.name,
-            quantity: cards.quantity
-          }))
+    //проверка введено ли корректное название формата
+    if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {
+      } else {
+        return res.status(400).json({ 
+          message: `Please use correct 'format' name`, 
+          formatNames: `standard, pioneer, modern, legacy, vintage, pauper`
         })
-      } else {git
-        let count = 0;
-        let newCards = [];
-        for (let i = 0; i < req.body.cards.length; i++) {
-          //Проверка на количество 
-          if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
-              return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
-          };
-          
-          const response = await axios.get(`https://api.scryfall.com/cards/${req.body.cards[i].scryfallId}`, {validateStatus: false});
-          //проверка на ошибочное введение
-          if (response.status !== 200) {
-            return res.status(404).json({message: `We not found cards with your scryfall ID '${req.body.cards[i].scryfallId}'`});
-          } 
-          //Проверка на наличие такой карты в скрайфоле
-          cardName = response.data;
-          //Проверка на легальность
-          if (cardName.legalities[req.body.format] === 'not_legal') {
-            return res.status(400).json({message: `You have not legal card for ${req.body.format}: ${cardName.name}`});
-          };
-          //Проверка на количество карт. Не более 10
-          count = count + req.body.cards[i].quantity;
-          if (count > 10) {
-            return res.status(400).json({message: 'You have more than 10 cards in your deck!'});
-          }
-          //Проверка на наличие карты в БД и добавление в БД новых карт если их нет в БД
-          const cardInDb = await Card.findOne({ name: cardName.name });
-          if (!cardInDb) {
-            await Card.create({
-              name: cardName.name,
-              scryfallId: cardName.id,
-              image: cardName.image_uris.normal
-            });
-            newCards.push(cardName.name)
-          }
-        };
-        
-        const doc = await Model.create(req.body);
-    
-        res.status(201).json({
-          status: 'success',
-          deckId: doc.id,
-          name: doc.name,
-          format: doc.format,
-          created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT'),      
-          addedCardsInDB: newCards
-        });
+      }
+    // Проверка на наличие карт в запросе
+    if(req.body.cards.length < 1) {
+      return res.status(400).json({message: 'You must have at least one card in deck'});
+    }
+    let count = 0;
+    for (let i = 0; i < req.body.cards.length; i++) {
+      //Проверка на количество 
+      if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
+          return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
-    } else {
-        const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
-        return res.status(200).json({ 
-          formats: formats
-        })
-    };
+      //Проверка на количество карт в колоде
+      count = count + req.body.cards[i].quantity;
+      if (count > 10) {
+        return res.status(400).json({message: 'You have more than 10 cards in your deck!'});
+      }
+    }
+    
+    const doc = await Model.create(req.body);
+
+    res.status(201).json({
+      status: 'success, deck created',
+      deckId: doc.id,
+      name: doc.name,
+      format: doc.format,
+      created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT')
+    });
   });
     
 
@@ -309,19 +299,19 @@ exports.getOne = Model =>
       return res.status(400).json({message: 'Invalid ID, please enter valid ID or use newdeck/<formatName>'});
     }
    
-    const doc = await Model.findById(req.params.id);
+    const doc = await Model.findById(req.params.id).populate('cards.card');
 
     if (!doc) {
       return res.status(404).json({message: 'No document found with that ID'});
     };
-    
+        
     res.status(200).json({
       status: 'success',
       name: doc.name,
       format: doc.format,
       created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
       cards: doc.cards.map(cards => ({
-        scryfallId: cards.scryfallId,
+        name: cards.card.name,
         quantity: cards.quantity
       }))
     });
@@ -337,70 +327,56 @@ exports.deleteOne = Model =>
 
     res.status(204).json({
       status: 'success',
-      data: null
+      message: 'Document deleted successfully'
     });
   });
 
 exports.updateOneDeck = Model =>
   catchAsync(async (req, res, next) => {
-    if (req.body.name === '') { // проверка на пустое имя
-      return res.status(400).json({message: 'Deck name cannot be empty'});
+    // проверка на пустое имя
+    if (req.body.name === '') { 
+      return next(res.status(400).json({message: 'Deck name cannot be empty'}));
     };
-    const deck = await Model.findById(req.params.id);
-    if (req.body.cards.length === 0) {
-      return res.status(400).json({message: 'No cards'})
+    //проверка введено ли корректное название формата
+    if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {
+      } else {
+        return res.status(400).json({ 
+          message: `Please use correct 'format' name`, 
+          formatNames: `standard, pioneer, modern, legacy, vintage, pauper`
+        })
+      }
+    // Проверка на наличие карт в запросе
+    if(req.body.cards.length < 1) {
+      return res.status(400).json({message: 'You must have at least one card in deck'});
     }
     let count = 0;
-    let newCards = [];
     for (let i = 0; i < req.body.cards.length; i++) {
       //Проверка на количество 
       if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
-        return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
+          return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
-      const response = await axios.get(`https://api.scryfall.com/cards/${req.body.cards[i].scryfallId}`, {validateStatus: false});
-      //проверка на ошибочное введение
-      if (response.status !== 200) {
-        return res.status(404).json({message: `We not found cards with your scryfall ID '${req.body.cards[i].scryfallId}'`});
-      } 
-      //Проверка на наличие такой карты в скрайфоле
-      cardName = response.data;
-      //Проверка на легальность
-      if (cardName.legalities[req.body.format] === 'not_legal') {
-        return res.status(400).json({message: `You have not legal card for ${deck.format}: ${cardName.name}`});
-      };
-      //Проверка на количество карт. Не более 10
+      //Проверка на количество карт в колоде
       count = count + req.body.cards[i].quantity;
       if (count > 10) {
         return res.status(400).json({message: 'You have more than 10 cards in your deck!'});
       }
-      //Проверка на наличие карты в БД и добавление в БД новых карт если их нет в БД
-      const cardInDb = await Card.findOne({ name: cardName.name });
-      if (!cardInDb) {
-        await Card.create({
-          name: cardName.name,
-          scryfallId: cardName.id,
-          image: cardName.image_uris.normal
-        });
-        newCards.push(cardName.name)
-      }
-    };
-
+    }
+    
     const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
     });
-
+  
     if (!doc) {
       return res.status(404).json({message: 'No document found with that ID'});
     }
 
-    res.status(201).json({
-      status: 'success',
+    res.status(200).json({
+      status: 'success, document updated successfully',
       deckId: doc.id,
       name: doc.name,
       format: doc.format,
-      created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT'),      
-      addedCardsInDB: newCards
+      created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT')
     });
-  });
+  }); 
   

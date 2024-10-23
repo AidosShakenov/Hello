@@ -3,8 +3,7 @@ const mongoose = require('mongoose');
 const cardSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    unique: true  
+    required: true
   },
   scryfallId: {
     type: String,
@@ -13,8 +12,7 @@ const cardSchema = new mongoose.Schema({
   },
   image: {
     type: String, 
-    required: true,
-    unique: true 
+    required: true
   }
 }); 
 

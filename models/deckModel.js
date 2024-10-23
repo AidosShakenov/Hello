@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Card = require('./cardModel');
 
 const deckSchema = new mongoose.Schema({
   name: {
@@ -15,7 +16,10 @@ const deckSchema = new mongoose.Schema({
     default: Date.now
   },
   cards: [{
-    scryfallId: {type: String, required: true},
+    card: {
+      ref: 'Card',
+      type: mongoose.Schema.ObjectId
+    },
     quantity: {type: Number, required: true, min:1, max:4},      
   }]  
 }); 
