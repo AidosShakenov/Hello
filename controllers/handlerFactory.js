@@ -41,7 +41,7 @@ exports.newCard = Model =>
     }
     let cardsInDb = await Model.find({ scryfallId: { $in: cards.map(card => card.id)}});
     return res.status(200).json({
-      result: cardsInDb.length,
+      result: cards.length,
       cards: cards.map(cards => ({
         name: cards.name,
         scryfallId: cards.id
