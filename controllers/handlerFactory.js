@@ -123,10 +123,25 @@ exports.createOneDeck = Model =>
       return res.status(400).json({message: 'You must have at least one card in deck'});
     }
     let count = 0;
+    const cards = req.body.cards;
     for (let i = 0; i < req.body.cards.length; i++) {
+      let card = cards[i];
+      if (card.cardId.length !== 24) {
+        return res.status(400).json({message: `Card ID ${card.cardId} is incorrect`});
+      }
+      //Проверка на существование карты в БД
+      let cardInDb = await Card.findOne({_id: card.cardId});
+      const response = await axios.get(`https://api.scryfall.com/cards/${cardInDb.scryfallId}`, {validateStatus: false});
+      let cardFormat = response.data;
+      if (cardFormat.legalities[req.body.format] === "not_legal") {
+        return res.status(400).json({message: `Card '${cardFormat.name}' (id:${cardInDb._id}) not legal in ${req.body.format} format`});
+      }
+      if(!cardInDb) {
+        return res.status(404).json({message: `Card with ID ${card.cardId} not found in DB`});
+      }
       //Проверка на количество 
       if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
-          return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
+        return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
       //Проверка на количество карт в колоде
       count = count + req.body.cards[i].quantity;
