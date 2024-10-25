@@ -1,0 +1,74 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const catchAsync = require('./../utils/catchAsync');
+const axios = require('axios');
+
+const router = express.Router();
+
+const countrySchema = mongoose.Schema({
+  name: {type: String, required: true},
+  officialName: {type: String, required: true},
+  capital: {type: String,},
+  twoDigitsCode: {type: String, required: true, minlength: 2, maxlength: 2},
+})
+
+const Country = mongoose.model('Country', countrySchema);
+
+
+router
+  .route('/')
+  // Использовано 1 раз для создании коллекции
+  // .get(
+  //   catchAsync(async (req, res, next) => {
+  //     const response = await axios.get(`https://restcountries.com/v3.1/all?fields=name,cca2,capital`, {validateStatus: false});
+  //     const data = response.data;
+  //     // console.log(data);
+  //     for(let i = 0; i < data.length; i++) {
+  //       await Country.create({
+  //         name: data[i].name.common,
+  //         officialName:data[i].name.official,
+  //         capital: data[i].capital[0],
+  //         twoDigitsCode: data[i].cca2
+  //       })}
+  //     return res.status(200).json({success: true})
+  //   })
+  // )
+  .post(
+    catchAsync(async (req, res, next) => {
+      let countries = {};
+      if (!req.body.name && !req.body.officialName && !req.body.capital && !req.body.twoDigitsCode) {
+        countries = await Country.find()
+      }
+      if (req.body.name) {
+        countries = await Country.find({name: req.body.name})
+        if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by name'})}
+      } else {
+        if (req.body.officialName) { 
+          countries = await Country.find({officailName: req.body.officialName})
+          if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by officialName'})}
+        } else {
+          if (req.body.capital) {
+            countries = await Country.find({capital: req.body.capital})
+            if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by capital'})}
+          } else {
+            if (req.body.twoDigitsCode) {
+              countries = await Country.find({twoDigitsCode: req.body.twoDigitsCode})
+              if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by twoDigitsCode'})}
+            }
+          }
+        }
+      }
+            
+      res.status(200).json({
+        success: true,
+        countries: countries.map(countries => ({
+          name: countries.name,
+          officialName: countries.officialName,
+          capital: countries.capital,
+          twoDigitsCode: countries.twoDigitsCode,
+          id: countries._id
+        }))
+    })
+  }));
+
+module.exports = router;

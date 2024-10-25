@@ -10,6 +10,8 @@
   "author": "Aidos Shakenov",
   "license": "ISC",
   "dependencies": {
+    "@bugsnag/js": "^8.1.1",
+    "@bugsnag/plugin-express": "^8.1.1",
     "axios": "^1.7.7",
     "body-parser": "^1.20.3",
     "dotenv": "^16.4.5",
@@ -21,5 +23,9 @@
   },
   "engines": {
     "node": ">=10.0.2"
+  },
+  "devDependencies": {
+    "@bugsnag/source-maps": "^2.3.3",
+    "webpack-bugsnag-plugins": "^1.8.0"
   }
 }

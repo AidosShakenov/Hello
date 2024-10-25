@@ -314,7 +314,7 @@ exports.getAll = Model =>
 exports.getOne = Model =>
   catchAsync(async (req, res, next) => {
     if (req.params.id.length !== 24) {
-      return res.status(400).json({message: 'Invalid ID, please enter valid ID or use newdeck/<formatName>'});
+      return res.status(400).json({message: 'Invalid ID'});
     }
    
     const doc = await Model.findById(req.params.id).populate('cards.cardId');
