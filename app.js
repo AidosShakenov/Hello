@@ -28,11 +28,14 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
+//todo файл не js
+//todo объеденить одинаковый путь в один файл (если у трех роутов путь начинается с одного текста то отдельный роут)
 app.use('/api/v1/Countries', countriesRouter);
 app.use('/api/v1/Decks', deckRouter);
 app.use('/api/v1/Cards', cardRouter);
 
 // This handles any errors that Express catches
 //app.use(middleware.errorHandler)
+
 
 module.exports = app;

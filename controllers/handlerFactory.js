@@ -2,9 +2,20 @@ const catchAsync = require('./../utils/catchAsync');
 const axios = require('axios');
 const Card = require('../models/cardModel');
 const moment = require('moment-timezone');
+const Deck = require("../models/deckModel");
 
 //Поиск карты
-exports.newCard = Model => 
+
+//todo переписать
+
+//запрашиваем скайфолл
+//запрашиваем в нашей бд все карты у которых айди скайфола такойже как в респонсе
+//формируем список карт скайфола
+//внутри foreach проверяем есть ли у нас такая карта
+// если есть добавляем монго id
+
+
+exports.newCard = Model =>
   catchAsync(async (req, res, next) => {
     if (req.body.name === '') { // проверка на пустое имя
       return res.status(400).json({message: 'Please enter a name'});
@@ -14,7 +25,7 @@ exports.newCard = Model =>
     //проверка на ошибочное введение
     if (response.status !== 200) {
       return next(res.status(404).json({message: `We not found cards with your card name '${req.body.name}'`}));
-    } 
+    }
     let cards = response.data.data;
     if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format)) {
       cards = [];
@@ -26,8 +37,8 @@ exports.newCard = Model =>
         return res.status(404).json({ messege: `Not found cards named '${req.body.name}' in '${req.body.format}' format`})
       }
     } else if (req.body.format !== '') {
-      return res.status(400).json({ 
-        message: `Please use correct 'format' name or empty 'format' field`, 
+      return res.status(400).json({
+        message: `Please use correct 'format' name or empty 'format' field`,
         formatNames: `standard, pioneer, modern, legacy, vintage, pauper`
       })
     }
@@ -65,7 +76,7 @@ exports.createCard = Model =>
     if (!cardName.image_uris) {
       images = cardName.card_faces[0].image_uris.normal + ' // ' + cardName.card_faces[1].image_uris.normal
     } else {images = cardName.image_uris.normal}
-    
+
     const newCard = await Model.create({
       name: cardName.name,
       scryfallId: cardName.id,
@@ -83,10 +94,11 @@ exports.createCard = Model =>
     })
   })
 
-exports.getFormats = () => 
+//todo переписать
+exports.getFormats = () =>
   catchAsync(async (req, res, next) => {
     const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
-    return res.status(200).json({ 
+    return res.json({
       formats: formats
     })
   });
@@ -94,14 +106,14 @@ exports.getFormats = () =>
 exports.createOneDeck = Model =>
   catchAsync(async (req, res, next) => {
     // проверка на пустое имя
-    if (req.body.name === '') { 
+    if (req.body.name === '') {
       return res.status(400).json({message: 'Deck name cannot be empty'});
     };
     //проверка введено ли корректное название формата
     if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {
       } else {
-        return res.status(400).json({ 
-          message: `Please use correct 'format' name`, 
+        return res.status(400).json({
+          message: `Please use correct 'format' name`,
           formatNames: `standard, pioneer, modern, legacy, vintage, pauper`
         })
       }
@@ -127,7 +139,7 @@ exports.createOneDeck = Model =>
       if (cardFormat.legalities[req.body.format] === "not_legal") {
         return res.status(400).json({message: `Card '${cardFormat.name}' (id:${cardInDb._id}) not legal in ${req.body.format} format`});
       }
-      //Проверка на количество 
+      //Проверка на количество
       if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
         return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
@@ -140,9 +152,9 @@ exports.createOneDeck = Model =>
         return res.status(400).json({message: `You can't have duplicate cards in your deck!`});
       }
       duplicates.push(card.cardId);
-      
+
     }
-    
+
     const doc = await Model.create(req.body);
 
     res.status(201).json({
@@ -153,14 +165,15 @@ exports.createOneDeck = Model =>
       created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT')
     });
   });
-    
+
+
 
 exports.getAll = Model =>
   catchAsync(async (req, res, next) => {
     const {fromDate, toDate, format } = req.body;
-    let docs = {};      
+    let docs = {};
     const fromDateArray = fromDate.split(/\.|\, |\:/).map(Number);
-    const toDateArray = toDate.split(/\.|\, |\:/).map(Number); 
+    const toDateArray = toDate.split(/\.|\, |\:/).map(Number);
     //Заполнены все поля
     if (fromDate && toDate && format) {
       if(fromDate.length !== 17 || toDate.length !== 17) {
@@ -178,7 +191,7 @@ exports.getAll = Model =>
           return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
         }
       };
-      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0)
       const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
       docs = await Model.find({ createdAt: { $gte: fd, $lte: td }, format: `${format}`});
       if (docs.length === 0) {
@@ -195,7 +208,7 @@ exports.getAll = Model =>
           return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
         }
       };
-      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0)
       const td = new Date(toDateArray[2], toDateArray[1]-1, toDateArray[0], toDateArray[3], toDateArray[4], 0, 0)
       docs = await Model.find({ createdAt: { $gte: fd, $lte: td }});
       if (docs.length === 0) {
@@ -212,7 +225,7 @@ exports.getAll = Model =>
           return res.status(400).json({message: 'Please enter valid date format. Example: DD.MM.YYYY, HH:MM'});
         }
       };
-      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0) 
+      const fd = new Date(fromDateArray[2], fromDateArray[1]-1, fromDateArray[0], fromDateArray[3], fromDateArray[4], 0, 0)
       docs = await Model.find({ createdAt: { $gte: fd}});
       if (docs.length === 0) {
         return res.status(200).json({message: 'No documents found between this date range'});
@@ -239,7 +252,7 @@ exports.getAll = Model =>
       if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(400).json({
-          message: `Please use correct 'format' name`, 
+          message: `Please use correct 'format' name`,
           formats: formats
         })
       };
@@ -256,7 +269,7 @@ exports.getAll = Model =>
       if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(400).json({
-          message: `Please use correct 'format' name`, 
+          message: `Please use correct 'format' name`,
           formats: formats
         })
       };
@@ -279,7 +292,7 @@ exports.getAll = Model =>
       if(['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'].includes(req.body.format) && req.body.format !== '') {} else {
         const formats = ['standard', 'pioneer', 'modern', 'legacy', 'vintage', 'pauper'];
         return res.status(400).json({
-          message: `Please use correct 'format' name`, 
+          message: `Please use correct 'format' name`,
           formats: formats
         })
       };
@@ -295,9 +308,9 @@ exports.getAll = Model =>
       };
     }
     // Пустые поля
-    if (!fromDate && !toDate && !format) {      
+    if (!fromDate && !toDate && !format) {
       docs = await Model.find();
-    }  
+    }
 
     res.status(200).json({
       success: true,
@@ -311,30 +324,42 @@ exports.getAll = Model =>
     })
   });
 
+
+//todo переписать
+
+//todo валидация
 exports.getOne = Model =>
   catchAsync(async (req, res, next) => {
     if (req.params.id.length !== 24) {
       return res.status(400).json({message: 'Invalid ID'});
     }
-   
-    const doc = await Model.findById(req.params.id).populate('cards.cardId');
+
+    //todo вынести id в отдельную переменную
+    //todo .populate('cards.card');
+    const doc = await Deck.findById(req.params.id).populate('cards.cardId');
 
     if (!doc) {
       return res.status(404).json({message: 'No document found with that ID'});
     };
-        
+
     res.status(200).json({
       success: true,
-      name: doc.name,
-      format: doc.format,
-      created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
-      cards: doc.cards.map(cards => ({
-        name: cards.cardId.name,
-        quantity: cards.quantity
-      }))
+      deck: {
+        id: doc.id,
+        name: doc.name,
+        format: doc.format,
+        //todo .locale('ru')
+        created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+        cards: doc.cards.map(cards => ({
+          //todo id
+          name: cards.cardId.name,
+          quantity: cards.quantity
+        }))
+      }
     });
   });
 
+//todo переписать
 exports.deleteOne = Model =>
   catchAsync(async (req, res, next) => {
     const doc = await Model.findByIdAndDelete(req.params.id);
@@ -352,7 +377,7 @@ exports.deleteOne = Model =>
 exports.updateOneDeck = Model =>
   catchAsync(async (req, res, next) => {
     // проверка на пустое имя
-    if (req.body.name === '') { 
+    if (req.body.name === '') {
       return res.status(400).json({message: 'Deck name cannot be empty'});
     };
     // Проверка на наличие карт в запросе
@@ -382,7 +407,7 @@ exports.updateOneDeck = Model =>
       if (cardFormat.legalities[deck.format] === "not_legal") {
         return res.status(400).json({message: `Card '${cardFormat.name}' (id:${cardInDb._id}) not legal in ${deck.format} format`});
       }
-      //Проверка на количество 
+      //Проверка на количество
       if(req.body.cards[i].quantity < 1 || req.body.cards[i].quantity > 4) {
         return res.status(400).json({message: `You can have only 1-4 copies of ${req.body.cards[i].name}`});
       };
@@ -396,7 +421,7 @@ exports.updateOneDeck = Model =>
       }
       duplicates.push(card.cardId);
     }
-    
+
     await Model.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
@@ -406,5 +431,4 @@ exports.updateOneDeck = Model =>
       succes: true,
       id: req.params.id
     });
-  }); 
-  
+  });

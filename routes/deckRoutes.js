@@ -8,6 +8,10 @@ router
   .post(deckController.getAllDecks);
 
 router
+  .route('/new')
+  .post(deckController.getAllNew);
+
+router
   .route('/newdeck')
   .post(deckController.createDeck);
 
