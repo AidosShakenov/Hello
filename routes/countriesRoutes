@@ -14,7 +14,15 @@ const countrySchema = mongoose.Schema({
 
 const Country = mongoose.model('Country', countrySchema);
 
+//todo сделать метод запускаемым много раз
 
+//пусть отдает 3 числа
+UpdatedCount
+DeletedCount
+AddedCount
+
+//todo сделать метод удаления РАНДОМНОЙ страны
+//todo сделать метод добавления РАНДОМНОЙ страны
 router
   .route('/')
   // Использовано 1 раз для создании коллекции
@@ -43,7 +51,7 @@ router
         countries = await Country.find({name: req.body.name})
         if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by name'})}
       } else {
-        if (req.body.officialName) { 
+        if (req.body.officialName) {
           countries = await Country.find({officailName: req.body.officialName})
           if (countries.length < 1) {return res.status(404).json({success: false, message: 'Not found by officialName'})}
         } else {
@@ -58,7 +66,7 @@ router
           }
         }
       }
-            
+
       res.status(200).json({
         success: true,
         countries: countries.map(countries => ({
