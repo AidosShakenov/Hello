@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const Card = require('./cardModel');
+
+const {FORMAT_ARRAY} = require("../utils/enums");
 
 const deckSchema = new mongoose.Schema({
   name: {
@@ -9,21 +10,21 @@ const deckSchema = new mongoose.Schema({
   format: {
     type: String,
     required: true,
-    enum: ['standard', 'modern', 'pioneer', 'legacy', 'vintage', 'pauper']
+    enum: FORMAT_ARRAY
   },
   createdAt: {
     type: Date,
     default: Date.now
   },
   cards: [{
-    cardId: {
-      ref: 'Card',
+    card: {
+      ref: 'card',
       type: mongoose.Schema.ObjectId
     },
     quantity: {type: Number, required: true, min:1, max:4},      
   }]  
 }); 
 
-const Deck = mongoose.model('Deck', deckSchema);
+const deck = mongoose.model('deck', deckSchema);
 
-module.exports = Deck;
+module.exports = deck;

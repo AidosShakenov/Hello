@@ -9,20 +9,15 @@ router
 
 router
   .route('/new')
-  .post(deckController.getAllNew);
-
-router
-  .route('/newdeck')
   .post(deckController.createDeck);
 
 router
-  .route('/newdeck/formats')
+  .route('/new/formats')
   .get(deckController.getFormats);
 
-
 router
-  .route('/:id')
-  .get(deckController.getDeck)
+  .route('/id')
+  .post(deckController.getDeck)
   .patch(deckController.updateDeck)
   .delete(deckController.deleteDeck);
 
