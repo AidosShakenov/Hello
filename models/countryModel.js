@@ -2,21 +2,22 @@ const mongoose = require('mongoose');
 
 const countrySchema = new mongoose.Schema({
   name: {
-    type: String, 
+    type: String,
     required: true,
     unique: true
   },
   officialName: {
-    type: String, 
+    type: String,
     required: true
   },
   capital: {
     type: String
   },
+  //todo уникальный
   twoDigitsCode: {
-    type: String, 
+    type: String,
     required: true,
-    minlength: 2, 
+    minlength: 2,
     maxlength: 2
   },
 })

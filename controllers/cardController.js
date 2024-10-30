@@ -13,21 +13,24 @@ exports.newCard = [
   body("name").isString(),
 
   catchAsync(async (req, res, next) => {
-    
+
     const {name, format} = req.body;
 
+    //todo эт че такое
     let nameSearch = name.replace(' ', '');
+    //todo ссылку в конфиг
+    //todo гет параметры в конфиг аксиоса надо
     const response = await axios.get(`https://api.scryfall.com/cards/search?q=${nameSearch}`, {validateStatus: false});
     if (response.status !== 200) {
       return next(res.status(404).json({success: false, message: `We not found cards with your card name '${name}'`}));
     }
-    
+    //todo поиск только тех карт которые нам пришли из базы
     const cardsScryfallId = await Card.find().select('scryfallId');
     const scryfallIdArray = cardsScryfallId.map(function (array) {return array.scryfallId}); //список имен из базы
-    
+
     let totalCardsFoundInDb = 0
     let cards = [];
-
+    //todo эта проверка бесполезна - ее валидатор проверяет
     if(FORMAT_ARRAY.includes(format)) {
       totalCardsFoundInDb = 0;
       cards = [];
@@ -57,7 +60,7 @@ exports.newCard = [
       if (cards.length < 1) {
         return res.status(404).json({ messege: `Not found cards named '${name}' in '${format}' format`})
       }
-    }; 
+    };
 
     return res.json({
       totalCardsFoundInScryfall: cards.length,
@@ -83,12 +86,12 @@ exports.createCard = [
     if (card.length === 1) {
       return res.status(400).json({succes: false, message: `You allready have ${card[0].name} in DB`})
     }
-    
+
     const response = await axios.get(`https://api.scryfall.com/cards/${scryfallId}`, {validateStatus: false});
     if (response.status!== 200) {
       return res.status(404).json({success: false, message: `We not found card with that ID`});
     }
-    
+
     const cardName = response.data;
     let images = '';
     if (!cardName.image_uris) {
