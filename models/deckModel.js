@@ -21,7 +21,8 @@ const deckSchema = new mongoose.Schema({
       ref: 'card',
       type: mongoose.Schema.ObjectId
     },
-    quantity: {type: Number, required: true, min:1, max:4},      
+    quantity: {type: Number, required: true, min:1, max:4},
+    _id: false   
   }]  
 }); 
 

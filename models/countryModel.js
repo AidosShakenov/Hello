@@ -13,13 +13,13 @@ const countrySchema = new mongoose.Schema({
   capital: {
     type: String
   },
-  //todo уникальный
   twoDigitsCode: {
     type: String,
     required: true,
+    unique: true,
     minlength: 2,
     maxlength: 2
-  },
+  }
 })
 
 const country = mongoose.model('country', countrySchema);

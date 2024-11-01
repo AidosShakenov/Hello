@@ -51,38 +51,42 @@ exports.createDeck = [
 
   catchAsync(async (req, res, next) => {
 
-    const {name, format, cards} = req.body;
+    const {format, cards} = req.body;
     const query = req.body
+
+    const cardsIds = cards.map(c => c.card);
+    const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalities`)
+    const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',')
 
     let count = 0;
     let duplicates = [];
-
-    //todo foreach
-    for (let i = 0; i < cards.length; i++) {
-      let card = cards[i];
-      //Проверка на существование карты в БД
-      let cardInDb = await Card.findOne({_id: card.card});
-      //todo если нет 2ух карт то сообщение об ошибке должно быть по обеим картам (это надо до foreach проверять)
-      if(!cardInDb) {
-        return res.status(404).json({success: false, message: `Card with ID ${card.card} not found in DB`});
-      }
-      //todo при сохранении деки мы не должны дергать аксиос - у нас вся инфа должна уже быть
-      const response = await axios.get(`https://api.scryfall.com/cards/${cardInDb.scryfallId}`, {validateStatus: false});
-      let cardAxios = response.data;
-      //Проверка на легальность
-      //todo проверку на легальность - одну для всех и в ошибки
-      if (cardAxios.legalities[format] === "not_legal") {
-        return res.status(400).json({success: false, message: `Card '${cardAxios.name}' (id:${cardInDb._id}) not legal in ${deckFormat} format`});
-      }
-      //Проверка на количество карт в колоде
-      count = count + req.body.cards[i].quantity;
+    let cardsNotFound = [];
+    let errors = [];
+    cards.forEach(element => {
+      count = count + element.quantity;
       if (count > 10) {
-        return res.status(400).json({success: false, message: 'You have more than 10 cards in your deck!'});
+        errors.push('You have more than 10 cards in your deck!')
       }
-      if(duplicates.includes(card.card)) {
-        return res.status(400).json({success: false, message: `You can't have duplicate cards in your deck!`});
+      if(duplicates.includes(element.card)) {
+        errors.push(`You can't have duplicate (id: ${element.card}) cards in your deck!`);
       }
-      duplicates.push(card.card);
+      duplicates.push(element.card);
+      if(!cardsInDbIds.includes(element.card)) {
+        cardsNotFound.push(element.card)
+      }
+    });
+    if (cardsNotFound.length > 0) {
+      errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
+    }
+    
+    cardsInDb.forEach(element => {
+      if (element.legalities[format] === "not_legal") {
+        errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
+      }
+    });
+
+    if(errors.length > 0) {
+      return res.status(400).json({success: false, errors: errors});
     }
 
     const doc = await Deck.create(query);
@@ -127,8 +131,8 @@ exports.getDeck = [
         created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
         cards: doc.cards.map(cards => ({
           name: cards.card.name,
-          quantity: cards.quantity
-          //todo емана где id
+          quantity: cards.quantity,
+          mongoId: cards.card._id
         }))
       }
     });
@@ -147,7 +151,7 @@ exports.deleteDeck = [
       return res.status(404).json({message: 'No document found with that ID'});
     }
 
-    res.status(200).json({
+    res.json({
       status: 'success',
       message: 'Deck deleted'
     });
@@ -171,38 +175,46 @@ exports.updateDeck = [
     const format = deck.format;
     const query = req.body
 
+    const cardsIds = cards.map(c => c.card);
+    const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalities`)
+    const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',')
+
     let count = 0;
     let duplicates = [];
-
-    for (let i = 0; i < cards.length; i++) {
-      let card = cards[i];
-      //Проверка на существование карты в БД
-      let cardInDb = await Card.findOne({_id: card.card});
-      if(!cardInDb) {
-        return res.status(404).json({success: false, message: `Card with ID ${card.card} not found in DB`});
-      }
-      const response = await axios.get(`https://api.scryfall.com/cards/${cardInDb.scryfallId}`, {validateStatus: false});
-      let cardAxios = response.data;
-      //Проверка на легальность
-      if (cardAxios.legalities[format] === "not_legal") {
-        return res.status(400).json({success: false, message: `Card '${cardAxios.name}' (id:${cardInDb._id}) not legal in ${deckFormat} format`});
-      }
-      //Проверка на количество карт в колоде
-      count = count + req.body.cards[i].quantity;
+    let cardsNotFound = [];
+    let errors = [];
+    cards.forEach(element => {
+      count = count + element.quantity;
       if (count > 10) {
-        return res.status(400).json({success: false, message: 'You have more than 10 cards in your deck!'});
+        errors.push('You have more than 10 cards in your deck!')
       }
-      if(duplicates.includes(card.card)) {
-        return res.status(400).json({success: false, message: `You can't have duplicate cards in your deck!`});
+      if(duplicates.includes(element.card)) {
+        errors.push(`You can't have duplicate (id: ${element.card}) cards in your deck!`);
       }
-      duplicates.push(card.card);
+      duplicates.push(element.card);
+      if(!cardsInDbIds.includes(element.card)) {
+        cardsNotFound.push(element.card)
+      }
+    });
+    if (cardsNotFound.length > 0) {
+      errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
     }
+    
+    cardsInDb.forEach(element => {
+      if (element.legalities[format] === "not_legal") {
+        errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
+      }
+    });
 
+    if(errors.length > 0) {
+      return res.status(400).json({success: false, errors: errors});
+    }
+    
     await Deck.findByIdAndUpdate(id, query);
 
     res.json({
       success: true,
-      message: `Your deck '${name}' has been updated`
+      message: `Your deck has been updated`
     });
   })
 

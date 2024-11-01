@@ -6,12 +6,12 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(countryController.getAllCountries); //todo getAll по названию не принимает параметры , listCountries принимает
+  .post(countryController.listCountries); 
 
 router
-  .route('/check')
-  .get(countryController.countryCheck) //todo переназвать - syncCountries
-  .post(countryController.addRandom) //todo - addRandomCountry
-  .delete(countryController.deleteRandom);//todo - deleteRandomCountry
+  .route('/sync')
+  .get(countryController.syncCountries) 
+  .post(countryController.addRandomCountry)
+  .delete(countryController.deleteRandomCountry);
 
 module.exports = router;

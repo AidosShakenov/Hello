@@ -22,9 +22,6 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-//todo объеденить одинаковый путь в один файл (если у трех роутов путь начинается с одного текста то отдельный роут)
-
-
 const router = express.Router()
 router.use('/Countries', countriesRouter);
 router.use('/Decks', deckRouter);

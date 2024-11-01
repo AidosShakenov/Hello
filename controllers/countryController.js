@@ -2,99 +2,93 @@ const axios = require('axios');
 const {body} = require('express-validator')
 
 const catchAsync = require('../utils/catchAsync');
-const country = require('../models/countryModel');
+const Country = require('../models/countryModel');
+const customFunctions = require('../utils/customFunctions');
+const {REST_COUNTRY_URL} = require("../utils/axiosUrls");
 
-exports.addRandom = [
+
+exports.addRandomCountry = [
   catchAsync(async (req, res, next) => {
+    
+    let countryName = customFunctions.getRandomString(7);
+    let officialName = customFunctions.getRandomString(10);
+    let capital = customFunctions.getRandomString(5);
+    
+    let stringLength = 1;
+    let twoDigitsCode = '';
+    do {
+      twoDigitsCode = customFunctions.getRandomString(2);
+      const twoDigitsCodesInDb = await Country.find({ twoDigitsCode: twoDigitsCode});
+      stringLength = twoDigitsCodesInDb.length      
+    } while (stringLength === 1)
 
-    //todo сделать функцию которая будет рандомную строку с заданной длинной  getRandomString(5)
-    let countryName = (Math.random() + 1).toString(36).substring(2, 9);
-    let officialName = (Math.random() + 1).toString(36).substring(2, 11);
-    let capital = (Math.random() + 1).toString(36).substring(2, 7);
-    //todo а что если такой код уже есть в базе?
-    let twoDigitsCode = (Math.random() + 1).toString(36).substring(2, 4);
-
-    await country.create({name: countryName, officialName: officialName, capital: capital, twoDigitsCode: twoDigitsCode});
-    //todo status не нужен
-    res.status(201).json({success: true, message: 'Random country added successfully'});
+    await Country.create({name: countryName, officialName: officialName, capital: capital, twoDigitsCode: twoDigitsCode});
+    
+    res.json({success: true, message: 'Random country added successfully'});
   })
 ]
 
-exports.deleteRandom = [
+exports.deleteRandomCountry = [
   catchAsync(async (req, res, next) => {
 
-    await country.findOneAndDelete();
+    await Country.findOneAndDelete();
 
-    res.status(200).json({success: true, message: 'Random country deleted successfully'});
+    res.json({success: true, message: 'Random country deleted successfully'});
   })
 ]
 
-exports.countryCheck = [
+exports.syncCountries = [
   catchAsync(async (req, res, next) => {
-    //todo url - в конфиг
-    const axiosResponse = await axios.get(`https://restcountries.com/v3.1/all?fields=name,cca2,capital`, {validateStatus: false});
+    const axiosResponse = await axios.get(REST_COUNTRY_URL, {validateStatus: false});
     const axiosDocs = axiosResponse.data;
-    const axiosDocsNames = axiosDocs.map(function (countries) {return countries.name.common});//список имен из API
+    const axiosDocsCodes = axiosDocs.map(countries => {return countries.cca2});
+    console.log(axiosDocsCodes);
 
-    //todo когда ищем что-то конкретное нужно по id (что в данном случае twoDigitsCode)
-    //todo зачем нам только name?
-    const countryDb = await country.find().select('name');
-    const countryDbNames = countryDb.map(function (array) {return array.name}); //список имен из базы
+    const countryDb = await Country.find().select('twoDigitsCode');
+    console.log(countryDb)
+    const countryDbCodes = countryDb.map(codes => {return codes.twoDigitsCode});
 
-    let UpdatedCount = 0;
-    let DeletedCount = 0;
-    let AddedCount = 0;
-
-    //todo с 48ой по 56 кол из 2000ых
-    //надо через foreach + Promise.all
-    let i = 0;
-    for (element of countryDb) {
-      //кстати element тут тот самый i
-      if (!axiosDocsNames.includes(countryDb[i].name)) {
-        await country.findByIdAndDelete(countryDb[i]._id);
-        DeletedCount++;
+    let deletePromises = [];
+    countryDb.forEach(element => {
+      if(!axiosDocsCodes.includes(element.twoDigitsCode)) {
+        deletePromises.push(Country.findByIdAndDelete(element._id))
       }
-      i++;
-    }
-
-    i = 0;
-
-    //todo тут  было бы красиво сделать .save(upsert )с promise all
-    for(element of axiosDocs) {
-      if (countryDbNames.includes(axiosDocs[i].name.common))
+    });
+    
+    let upsertPromises = [];
+    let updatedCount = 0;
+    let addedCount = 0;
+    axiosDocs.forEach(element => {
+      upsertPromises.push(Country.findOneAndUpdate(
+        {twoDigitsCode: element.cca2},
         {
-          UpdatedCount++;
-          await country.findOneAndUpdate(
-            {name: axiosDocs[i].name.common},
-            {
-              officialName:axiosDocs[i].name.official,
-              capital: axiosDocs[i].capital[0],
-              twoDigitsCode: axiosDocs[i].cca2
-            })
-        } else {
-          await country.create({
-            name: axiosDocs[i].name.common,
-            officialName:axiosDocs[i].name.official,
-            capital: axiosDocs[i].capital[0],
-            twoDigitsCode: axiosDocs[i].cca2
-          });
-          AddedCount++;
-        };
-      i++
-      }
+          name: element.name.common,
+          officialName: element.name.official,
+          capital: element.capital[0],
+          twoDigitsCode: element.cca2
+        },
+        {upsert: true}
+      ))
+      if(countryDbCodes.includes(element.cca2)) {updatedCount++}
+      else {addedCount++}
+    })
+
+    const deleteResults = await Promise.all(deletePromises);
+    const upsertResults = await Promise.all(upsertPromises);
 
     return res.json({
       success: true,
       data: {
-        UpdatedCount: UpdatedCount,
-        AddedCount: AddedCount,
-        DeletedCount: DeletedCount
+        DeletedCount: deleteResults.length,
+        UpdatedCount: updatedCount,
+        AddedCount: addedCount,
+        UpsertedCount: upsertResults.length
       }
     })
   })
 ]
 
-exports.getAllCountries = [
+exports.listCountries = [
   body(['name', 'capital']).optional().isString(),
   body('twoDigitsCode').optional().isString().isLength({min: 2, max: 2}),
 
@@ -114,20 +108,18 @@ exports.getAllCountries = [
     const countries = await country.find(query);
 
     if (countries.length === 0) {
-      //todo при поиске списка мы не отдает 404 - только когда ищем конкретное
-      return res.status(404).json({success: false, message: 'Country not found'})
+      return res.status(400).json({success: false, message: 'Country not found'})
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       totalCountries: countries.length,
-      countries: countries.map(countries => ({
-        //todo - countries -> country
-        name: countries.name,
-        officialName: countries.officialName,
-        capital: countries.capital,
-        twoDigitsCode: countries.twoDigitsCode,
-        id: countries._id
+      countries: countries.map(country => ({
+        name: country.name,
+        officialName: country.officialName,
+        capital: country.capital,
+        twoDigitsCode: country.twoDigitsCode,
+        id: country._id
       }))
     })
   })
