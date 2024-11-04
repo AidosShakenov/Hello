@@ -14,17 +14,7 @@ const cardSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  //todo legalities - тут лучше сделать legalities: [String] (точнее не лучше - но для опыта норм))
-  legalities: {
-      standard: String,
-      pioneer: String,
-      modern: String,
-      legacy: String,
-      pauper: String,
-      vintage: String,
-      _id: false
-  }
-
+  legalTrue: [String]
 });
 
 const card = mongoose.model('card', cardSchema);

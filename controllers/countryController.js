@@ -1,11 +1,12 @@
 const axios = require('axios');
 const {body} = require('express-validator')
+const dotenv = require('dotenv');
 
 const catchAsync = require('../utils/catchAsync');
 const Country = require('../models/countryModel');
 const customFunctions = require('../utils/customFunctions');
-const {REST_COUNTRY_URL} = require("../utils/axiosUrls");
 
+dotenv.config({ path: '../config.env'});
 
 exports.addRandomCountry = [
   catchAsync(async (req, res, next) => {
@@ -39,13 +40,19 @@ exports.deleteRandomCountry = [
 
 exports.syncCountries = [
   catchAsync(async (req, res, next) => {
-    const axiosResponse = await axios.get(REST_COUNTRY_URL, {validateStatus: false});
+
+    const axiosConfig = {
+      methos: 'get',
+      url: process.env.REST_COUNTRY_URL,
+      params: {fields: 'name,cca2,capital'},      
+      validateStatus: false
+    }
+    const axiosResponse = await axios(axiosConfig);
+    
     const axiosDocs = axiosResponse.data;
     const axiosDocsCodes = axiosDocs.map(countries => {return countries.cca2});
-    console.log(axiosDocsCodes);
-
+    
     const countryDb = await Country.find().select('twoDigitsCode');
-    console.log(countryDb)
     const countryDbCodes = countryDb.map(codes => {return codes.twoDigitsCode});
 
     let deletePromises = [];
@@ -105,7 +112,7 @@ exports.listCountries = [
       query.twoDigitsCode = req.body.twoDigitsCode
     };
 
-    const countries = await country.find(query);
+    const countries = await Country.find(query);
 
     if (countries.length === 0) {
       return res.status(400).json({success: false, message: 'Country not found'})

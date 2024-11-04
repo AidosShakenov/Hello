@@ -1,11 +1,38 @@
 const {body} = require('express-validator')
 const moment = require("moment");
-const axios = require('axios');
 
 const Card = require('../models/cardModel');
 const Deck = require('./../models/deckModel');
 const catchAsync = require("../utils/catchAsync");
 const {FORMAT_ARRAY, BASE_DATE_TIME_FORMAT} = require("../utils/enums");
+
+const checkCardsInBody = async (cards, format) => { 
+  let errors = [];
+
+  const cardsIds = cards.map(c => c.cardId);
+  
+  const duplicates = cardsIds.filter((e, i, a) => a.indexOf(e) !== i);
+  if (duplicates.length) {
+    errors.push(`You can't have duplicates in your deck! IDs: ${duplicates.join(', ')}`);};
+  
+  const cardsQuantity = cards.map(c => c.quantity).reduce(function(sum, current) {return sum + current}, 0);
+  if(cardsQuantity > 10) {
+    errors.push('You have more than 10 cards in your deck!')}
+
+  const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalTrue`)
+  const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',');
+
+  const cardsNotFound = cardsIds.filter(card => !cardsInDbIds.includes(card));
+  if (cardsNotFound.length > 0) {
+    errors.push(`Not found cards in DB with IDs: ${cardsNotFound.join(', ')}`)}
+      
+  const notLegalCards = cardsInDb.filter(card => !(card.legalTrue).includes(format)).map(card => card.name + ` (${card._id})`);
+  if (notLegalCards.length>0) {
+    errors.push(`'${notLegalCards.join(', ')}' not legal in ${format} format`)}
+
+  if(errors.length > 0) {
+    return errors}
+}
 
 exports.getAllDecks = [
 
@@ -46,50 +73,16 @@ exports.createDeck = [
   body("name").notEmpty().withMessage("Name of deck is required"),
   body("format").notEmpty().custom((value)=> {return value && FORMAT_ARRAY.indexOf(value) !== -1}),
   body("cards").isArray({min: 1}).withMessage("Deck must contain at least one card"),
-  body("cards.*.card").isMongoId().withMessage("Card ID must be a valid MongoDB ID"),
+  body("cards.*.cardId").isMongoId().withMessage("Card ID must be a valid MongoDB ID"),
   body("cards.*.quantity").isInt({min: 1, max:4}).withMessage("Card quantity must be 1-4"),
 
   catchAsync(async (req, res, next) => {
 
     const {format, cards} = req.body;
-    const query = req.body
+    const query = req.body;
 
-    const cardsIds = cards.map(c => c.card);
-    const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalities`)
-    const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',')
-
-    let count = 0;
-    let duplicates = [];
-    let cardsNotFound = [];
-    let errors = [];
-    cards.forEach(element => {
-      //todo попробуй count сделать через reduce до foreach
-      count = count + element.quantity;
-      if (count > 10) {
-        errors.push('You have more than 10 cards in your deck!')
-      }
-      //todo и проверить дубликаты одной строчкой через группировку по id
-      if(duplicates.includes(element.card)) {
-        errors.push(`You can't have duplicate (id: ${element.card}) cards in your deck!`);
-      }
-      duplicates.push(element.card);
-      if(!cardsInDbIds.includes(element.card)) {
-        cardsNotFound.push(element.card)
-      }
-    });
-    if (cardsNotFound.length > 0) {
-      errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
-    }
-    //todo тут можно через _.filter найти все карты у которых в легальности нет нужной _.filter(cardsInDb, u=>element.legalities[format] === "not_legal")
-    cardsInDb.forEach(element => {
-      if (element.legalities[format] === "not_legal") {
-        errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
-      }
-    });
-
-    if(errors.length > 0) {
-      return res.status(400).json({success: false, errors: errors});
-    }
+    const errors = await checkCardsInBody(cards, format);
+    if(errors) {return res.status(400).json({success: false, errors: errors})};
 
     const doc = await Deck.create(query);
 
@@ -99,7 +92,7 @@ exports.createDeck = [
         deckId: doc.id,
         name: doc.name,
         format: doc.format,
-        created: moment(doc.createdAt).locale('ru').format('DD-MM-YYYY, LT')
+        created: doc.createdAt
       }
     });
   })
@@ -118,7 +111,7 @@ exports.getDeck = [
   catchAsync(async (req, res, next) => {
     const {id} = req.body;
 
-    const doc = await Deck.findById(id).populate('cards.card');
+    const doc = await Deck.findById(id).populate('cards.cardId');
 
     if (!doc) {
       return res.status(404).json({success: false, message: 'No document found with that ID'});
@@ -130,12 +123,11 @@ exports.getDeck = [
         id: doc.id,
         name: doc.name,
         format: doc.format,
-        //todo дату отдаем как есть
-        created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
+        created: doc.createdAt,
         cards: doc.cards.map(cards => ({
-          name: cards.card.name,
+          name: cards.cardId.name,
           quantity: cards.quantity,
-          mongoId: cards.card._id
+          mongoId: cards.cardId._id
         }))
       }
     });
@@ -165,7 +157,7 @@ exports.updateDeck = [
   body("id").isMongoId().withMessage("Invalid deck ID"),
   body("name").optional().notEmpty().withMessage("Name of deck is required"),
   body("cards").isArray({min: 1}).withMessage("Deck must contain at least one card"),
-  body("cards.*.card").isMongoId().withMessage("Card ID must be a valid MongoDB ID"),
+  body("cards.*.cardId").isMongoId().withMessage("Card ID must be a valid MongoDB ID"),
   body("cards.*.quantity").isInt({min: 1, max:4}).withMessage("Card quantity must be 1-4"),
 
   catchAsync(async (req, res, next) => {
@@ -176,45 +168,12 @@ exports.updateDeck = [
       return res.status(404).json({success: false, message: 'No document found with that ID'});
     }
     //todo формат не меняем
+    //я не меняю, а беру из базы для проверки карт на легальность
     const format = deck.format;
     const query = req.body
 
-    //тут бы поле card заменить на id d реквесте
-    const cardsIds = cards.map(c => c.card);
-    const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalities`)
-    const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',')
-
-    let count = 0;
-    let duplicates = [];
-    let cardsNotFound = [];
-    let errors = [];
-    //todo проверку карт на нормальность) можно вынести в отдельную функцию чтобы в  создании и редактировании использовать одну и туже функцию
-    cards.forEach(element => {
-      count = count + element.quantity;
-      if (count > 10) {
-        errors.push('You have more than 10 cards in your deck!')
-      }
-      if(duplicates.includes(element.card)) {
-        errors.push(`You can't have duplicate (id: ${element.card}) cards in your deck!`);
-      }
-      duplicates.push(element.card);
-      if(!cardsInDbIds.includes(element.card)) {
-        cardsNotFound.push(element.card)
-      }
-    });
-    if (cardsNotFound.length > 0) {
-      errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
-    }
-
-    cardsInDb.forEach(element => {
-      if (element.legalities[format] === "not_legal") {
-        errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
-      }
-    });
-
-    if(errors.length > 0) {
-      return res.status(400).json({success: false, errors: errors});
-    }
+    const errors = await checkCardsInBody(cards, format);
+    if(errors) {return res.status(400).json({success: false, errors: errors})};
 
     await Deck.findByIdAndUpdate(id, query);
 

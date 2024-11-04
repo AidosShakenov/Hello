@@ -29,7 +29,6 @@ router.use('/Countries', countriesRouter);
 router.use('/Decks', deckRouter);
 router.use('/Cards', cardRouter);
 
-//эт я себе для теста
 router.get('/testAction',  catchAsync(async (req, res, next) => {
   res.json({success: true})
 }))
