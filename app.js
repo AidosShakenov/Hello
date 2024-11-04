@@ -2,6 +2,8 @@ const express = require('express');
 const deckRouter = require('./routes/deckRoutes');
 const cardRouter = require('./routes/cardRoutes');
 const countriesRouter = require('./routes/countriesRoutes');
+const catchAsync = require("./utils/catchAsync");
+const Card = require('./models/cardModel');
 
 // var Bugsnag = require('@bugsnag/js')
 // var BugsnagPluginExpress = require('@bugsnag/plugin-express')
@@ -26,6 +28,11 @@ const router = express.Router()
 router.use('/Countries', countriesRouter);
 router.use('/Decks', deckRouter);
 router.use('/Cards', cardRouter);
+
+//эт я себе для теста
+router.get('/testAction',  catchAsync(async (req, res, next) => {
+  res.json({success: true})
+}))
 
 
 const baseApiRoute = app.use('/api/v1', router)

@@ -63,10 +63,12 @@ exports.createDeck = [
     let cardsNotFound = [];
     let errors = [];
     cards.forEach(element => {
+      //todo попробуй count сделать через reduce до foreach
       count = count + element.quantity;
       if (count > 10) {
         errors.push('You have more than 10 cards in your deck!')
       }
+      //todo и проверить дубликаты одной строчкой через группировку по id
       if(duplicates.includes(element.card)) {
         errors.push(`You can't have duplicate (id: ${element.card}) cards in your deck!`);
       }
@@ -78,7 +80,7 @@ exports.createDeck = [
     if (cardsNotFound.length > 0) {
       errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
     }
-    
+    //todo тут можно через _.filter найти все карты у которых в легальности нет нужной _.filter(cardsInDb, u=>element.legalities[format] === "not_legal")
     cardsInDb.forEach(element => {
       if (element.legalities[format] === "not_legal") {
         errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
@@ -128,6 +130,7 @@ exports.getDeck = [
         id: doc.id,
         name: doc.name,
         format: doc.format,
+        //todo дату отдаем как есть
         created: moment(doc.createdAt).locale('ru').format('DD.MM.YYYY, LT'),
         cards: doc.cards.map(cards => ({
           name: cards.card.name,
@@ -172,9 +175,11 @@ exports.updateDeck = [
     if (!deck) {
       return res.status(404).json({success: false, message: 'No document found with that ID'});
     }
+    //todo формат не меняем
     const format = deck.format;
     const query = req.body
 
+    //тут бы поле card заменить на id d реквесте
     const cardsIds = cards.map(c => c.card);
     const cardsInDb = await Card.find({_id: {$in: cardsIds}, }).select(`_id name legalities`)
     const cardsInDbIds = cardsInDb.map(c => c._id).toString().split(',')
@@ -183,6 +188,7 @@ exports.updateDeck = [
     let duplicates = [];
     let cardsNotFound = [];
     let errors = [];
+    //todo проверку карт на нормальность) можно вынести в отдельную функцию чтобы в  создании и редактировании использовать одну и туже функцию
     cards.forEach(element => {
       count = count + element.quantity;
       if (count > 10) {
@@ -199,7 +205,7 @@ exports.updateDeck = [
     if (cardsNotFound.length > 0) {
       errors.push(`Not found cards with IDs: ${cardsNotFound.join(', ')}`)
     }
-    
+
     cardsInDb.forEach(element => {
       if (element.legalities[format] === "not_legal") {
         errors.push(`'${element.name}' (id:${element._id}) not legal in ${format} format`)
@@ -209,7 +215,7 @@ exports.updateDeck = [
     if(errors.length > 0) {
       return res.status(400).json({success: false, errors: errors});
     }
-    
+
     await Deck.findByIdAndUpdate(id, query);
 
     res.json({

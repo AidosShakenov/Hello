@@ -5,8 +5,6 @@ const cardSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  //todo проверить работает ли такой индекс
-  //работает для проверки есть ли такая карта уже в базе при создании
   scryfallId: {
     type: String,
     required: true,
@@ -16,6 +14,7 @@ const cardSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  //todo legalities - тут лучше сделать legalities: [String] (точнее не лучше - но для опыта норм))
   legalities: {
       standard: String,
       pioneer: String,
@@ -25,7 +24,7 @@ const cardSchema = new mongoose.Schema({
       vintage: String,
       _id: false
   }
-  
+
 });
 
 const card = mongoose.model('card', cardSchema);
