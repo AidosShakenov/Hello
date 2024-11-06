@@ -82,7 +82,7 @@ exports.createDeck = [
     const query = req.body;
 
     const errors = await checkCardsInBody(cards, format);
-    if(errors) {return res.status(400).json({success: false, errors: errors})};
+    if(errors) {throw new Error(JSON.stringify(errors))};
 
     const doc = await Deck.create(query);
 
@@ -114,7 +114,7 @@ exports.getDeck = [
     const doc = await Deck.findById(id).populate('cards.cardId');
 
     if (!doc) {
-      return res.status(404).json({success: false, message: 'No document found with that ID'});
+      throw new Error('No document found with that ID');
     };
 
     res.json({
@@ -143,7 +143,7 @@ exports.deleteDeck = [
     const doc = await Deck.findByIdAndDelete(id);
 
     if (!doc) {
-      return res.status(404).json({message: 'No document found with that ID'});
+      throw new Error('No document found with that ID');
     }
 
     res.json({
@@ -165,15 +165,14 @@ exports.updateDeck = [
 
     const deck = await Deck.findById(id);
     if (!deck) {
-      return res.status(404).json({success: false, message: 'No document found with that ID'});
+      throw new Error('No document found with that ID');
     }
-    //todo формат не меняем
-    //я не меняю, а беру из базы для проверки карт на легальность
+    
     const format = deck.format;
     const query = req.body
 
     const errors = await checkCardsInBody(cards, format);
-    if(errors) {return res.status(400).json({success: false, errors: errors})};
+    if(errors) {throw new Error(JSON.stringify(errors))};
 
     await Deck.findByIdAndUpdate(id, query);
 

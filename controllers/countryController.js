@@ -115,7 +115,7 @@ exports.listCountries = [
     const countries = await Country.find(query);
 
     if (countries.length === 0) {
-      return res.status(400).json({success: false, message: 'Country not found'})
+      throw new Error( 'Country not found')
     }
 
     res.json({

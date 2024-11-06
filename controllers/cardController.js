@@ -18,7 +18,6 @@ exports.newCard = [
   catchAsync(async (req, res, next) => {
 
     const {name, format} = req.body;
-
     
     let axiosConfig = {
       method: 'get',
@@ -26,8 +25,9 @@ exports.newCard = [
       params: {q: name},
       validateStatus: false}
     const axiosResponse = await axios(axiosConfig);
+
     if (axiosResponse.status !== 200) {
-      return next(res.status(404).json({success: false, message: `We not found cards with your string '${name}'`}));
+      throw new Error(`We not found cards with your string '${name}'`)
     }
     
     const responseData = axiosResponse.data.data;
@@ -46,10 +46,7 @@ exports.newCard = [
         }
       }
     }
-    if (cards.length < 1) {
-      return res.status(404).json({ messege: `Not found cards '${name}' in name`})
-    }
-    
+        
     return res.json({
       success: true,
       message: `Cards with '${name}' in name found in Scryfall`,
@@ -74,7 +71,7 @@ exports.createCard = [
 
     const card = await Card.findOne({ scryfallId: `${scryfallId}`});
     if (card) {
-      return res.status(400).json({succes: false, message: `You allready have ${card.name} in DB`})
+      throw new Error(`You allready have ${card.name} in DB`)
     }
 
     let axiosConfig = {
@@ -84,7 +81,7 @@ exports.createCard = [
     const axiosResponse = await axios(axiosConfig);
     
     if (axiosResponse.status!== 200) {
-      return res.status(404).json({success: false, message: `We not found card with that ID`});
+      throw new Error(`We not found card with that ID`);
     }
 
     const cardName = axiosResponse.data;

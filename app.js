@@ -3,7 +3,6 @@ const deckRouter = require('./routes/deckRoutes');
 const cardRouter = require('./routes/cardRoutes');
 const countriesRouter = require('./routes/countriesRoutes');
 const catchAsync = require("./utils/catchAsync");
-const Card = require('./models/cardModel');
 
 // var Bugsnag = require('@bugsnag/js')
 // var BugsnagPluginExpress = require('@bugsnag/plugin-express')
@@ -13,7 +12,15 @@ const Card = require('./models/cardModel');
 //   plugins: [BugsnagPluginExpress]
 //})
 
+const errorHandler = (err, req, res, next) => {
+  res.status(400).json({ 
+    error: 'Error occurred',
+    message: err.message || 'An error occurred'    
+   });
+};
+
 const app = express();
+
 
 //var middleware = Bugsnag.getPlugin('express')
 // This must be the first piece of middleware in the stack.
@@ -33,9 +40,10 @@ router.get('/testAction',  catchAsync(async (req, res, next) => {
   res.json({success: true})
 }))
 
-
 const baseApiRoute = app.use('/api/v1', router)
 // This handles any errors that Express catches
 //app.use(middleware.errorHandler)
+
+app.use(errorHandler);
 
 module.exports = app;
