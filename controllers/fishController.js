@@ -59,8 +59,13 @@ exports.getFishesByProps = [
     
     const fishes = await Fish.find(query);    
     
+    if (countries || lakes) {
+      if(fishIds.length < 1) {
+        throw new Error(`Fishes not found with that properties`)
+      } 
+    }
     if (fishes.length<1) {
-      res.status(404).json({success: false, message: "Fishes not found with that properties"})
+      throw new Error(`Fishes not found with that properties`)
     } else {
       res.json({
         success: true,

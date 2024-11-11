@@ -16,7 +16,7 @@ const catchAsync = require("./utils/catchAsync");
 
 const errorHandler = (err, req, res, next) => {
   res.status(400).json({ 
-    error: 'Error occurred',
+    success: false,
     message: err.message || 'An error occurred'    
    });
 };
