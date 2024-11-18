@@ -1,11 +1,11 @@
-const {body} = require('express-validator')
+const {body, param} = require('express-validator')
 
 const catchAsync = require("../utils/catchAsync");
 const Country = require('../models/countryModel');
 const Fish = require('../models/fishModel');
 const Lake = require('../models/lakeModel');
 
-exports.getFishesByProps = [
+exports.list = [
 
   body('name').optional(),
   body(['fromSize','toSize']).optional().isInt(),
@@ -24,54 +24,59 @@ exports.getFishesByProps = [
     const {name, fromSize, toSize, lakes, countries} = req.body;
     let query = {}
     
+    if (name) 
+      query.name = new RegExp(name, 'i');
+
     let fishPromises = []
     let lakePromises = []
     let lakeIds = []
     let fishIds = []
     
-    
     if (countries && lakes) {
       countries.forEach(country => {lakePromises.push(Lake.find({_id: {$in: lakes}, countries: {countryId: country}}).select('_id'))})
     } else if (countries) {
-      countries.forEach(country => {lakePromises.push(Lake.find({countries: {countryId: country}}).select('_id'))})// Пихаем айди озер по странам
+      countries.forEach(country => {lakePromises.push(Lake.find({countries: {countryId: country}}).select('_id'))})
     } else if (lakes) {
-      lakePromises.push(Lake.find({_id: {$in: lakes}}).select('_id')) // Пихаем айди озер из боди
+      lakePromises.push(Lake.find({_id: {$in: lakes}}).select('_id')) 
     }
 
-    const lakePromisesData = await Promise.all(lakePromises) //Ищем все озера по айди
-    lakePromisesData.forEach(lakes => {lakes.forEach(lake => {lakeIds.push(lake._id.toString())})}) //Объединяем все айди озер
+    const lakePromisesData = await Promise.all(lakePromises) 
+    lakePromisesData.forEach(lakes => {
+      lakes.forEach(lake => {
+        lakeIds.push(lake._id.toString())}
+      )
+    })
         
-    lakeIds.forEach(lake => {fishPromises.push(Fish.find({lakes: {lakeId: lake}}))}) //Пихаем все поиски рыб по озерам
-    const fishPromisesData = await Promise.all(fishPromises)//Ищем все рыбы
+    lakeIds.forEach(lake => {
+      fishPromises.push(Fish.find({lakes: {lakeId: lake}}))
+    }) 
+    const fishPromisesData = await Promise.all(fishPromises)
 
-    fishPromisesData.forEach(fishes => {fishes.forEach(fish => {fishIds.push(fish._id.toString())})}) //Объедняем всех рыб
-    
-    if (name) 
-      query.name = new RegExp(name, 'i');
-    if (fromSize) 
-      query.size = { $gte: fromSize};
-    if (toSize) 
-      query.size = {$lte: toSize};
-    if (fromSize && toSize) 
-      query.size = { $gte: fromSize, $lte: toSize}
-    
+    fishPromisesData.forEach(fishes => {fishes.forEach(fish => {fishIds.push(fish._id.toString())})})
     if (fishIds.length > 0) {query._id = {$in: fishIds}}
+    
+    if (fromSize && toSize) {
+      query.size = { $gte: fromSize, $lte: toSize}
+    } else if (fromSize) {
+      query.size = { $gte: fromSize};
+    } else if (toSize) {
+      query.size = {$lte: toSize};
+    }
     
     const fishes = await Fish.find(query);    
     
-    if (countries || lakes) {
-      if(fishIds.length < 1) {
-        throw new Error(`Fishes not found with that properties`)
-      } 
-    }
     if (fishes.length<1) {
-      throw new Error(`Fishes not found with that properties`)
+      res.json({
+        success: false,
+        totalFound: 0,
+        fishes: []
+      })
     } else {
       res.json({
         success: true,
         totalFound: fishes.length,
         fishes: fishes.map(fish => ({
-          fishId: fish._id,
+          id: fish._id,
           name: fish.name,
           size: fish.size
         }))
@@ -80,102 +85,109 @@ exports.getFishesByProps = [
   })
 ]
 
-exports.list = [
-  catchAsync(async (req, res) => {
-    const fishes = await Fish.find()
-    res.json({
-      success: true, 
-      fishesInDb: fishes.length,
-      fishes: fishes.map(fish => ({
-        name: fish.name,
-        fishId: fish._id,
-        size: fish.size
-      }))
-    })
-  })
-]
-
 exports.get = [
   [
-    body('_id').isMongoId().withMessage('Invalid fish ID')
+    param('id').isMongoId().withMessage('Invalid fish ID')
   ],
   catchAsync(async (req, res) => {
-    const { _id } = req.body;
-    const fish = await Fish.findById(_id).populate('lakes.lakeId');
-    if (!fish) {throw new Error(`Fish with id ${_id} not found`)}
+    const { id } = req.params;
+    const fish = await Fish.findById(id).populate('lakes.lakeId');
+    if (!fish) {
+      throw new Error(`Fish with id ${id} not found`)
+    } else {
     res.json({
-      success: true, 
-      data: {
-        name: fish.name,
-        _id: fish._id,
-        size: fish.size,
-        lakes: fish.lakes.map(lake => ({
-          lakeName: lake.lakeId.name,
-          lakeId: lake.lakeId._id
-        }))
-      }
-    })
+        success: true, 
+        data: {
+          name: fish.name,
+          size: fish.size,
+          lakes: fish.lakes.map(lake => ({
+            name: lake.lakeId.name,
+            id: lake.lakeId._id
+          })),
+          updatedBy: fish.updatedBy,
+          updatedAt: fish.updatedAt
+        }
+      })
+    }
   })
 ];
 
-// const fishFieldValidation = [
-//   body('name').notEmpty().isString().withMessage('Name is required'),
-//   body('size').isInt().withMessage('Size must be a number'),
-//   body('lakes').isArray({min: 1}).withMessage('Fish must have at least one lake'),
-//   body('lakes.*.lakeId').isMongoId().custom(async (value) => {
-//     if (!(await Lake.findById(value))) {throw new Error(`Lake with id ${value} not found`)}
-//   })
-// ];
+const fishFieldValidation = [
+  body('name').notEmpty().isString().withMessage('Name is required'),
+  body('size').isInt().withMessage('Size must be a number'),
+  body('lakes').isArray({min: 1}).withMessage('Fish must have at least one lake'),
+  body('lakes.*.lakeId').isMongoId().custom(async (value) => {
+    if (!(await Lake.findById(value))) {throw new Error(`Lake with id ${value} not found`)}
+  })
+];
 
-// const updateFish = async (fish, props) => {
-//   const { name, size, lakes } = props;
+const updateFish = async (fish, props) => {
+  const { name, size, lakes, updatedBy } = props;
   
-//   fish.name = name;
-//   fish.size = size;
-//   fish.lakes = lakes;
-// };
+  fish.name = name;
+  fish.size = size;
+  fish.lakes = lakes;
+  fish.updatedBy = updatedBy;
+  fish.updatedAt = Date.now();
+};
 
-// exports.create = [
-//   [
-//     ...fishFieldValidation
-//   ],
-//   catchAsync(async (req, res, next) => {
-//     const name = req.body.name;
+exports.create = [
+  [
+    ...fishFieldValidation
+  ],
+  catchAsync(async (req, res, next) => {
+    const data = req.body
+    
+    if(await Fish.countDocuments({name: `${data.name}`})) 
+      {res.json({success: false, message: "Fish with this name exists"})};
 
-//     if(await Fish.countDocuments({name: `${name}`})) 
-//       {throw new Error("fish with this name exists")};
+    data.updatedBy = req.user.email;
 
-//     const fish = new Fish();
-//     await updateFish(fish, req.body);
-//     await fish.save();
-//     res.json({success: true, id: fish._id})
-//   })
-// ];
+    const fish = new Fish();
+    await updateFish(fish, data);
+    await fish.save();
+    res.json({success: true, id: fish._id})
+  })
+];
 
-// exports.update = [
-//   [
-//     body('_id').isMongoId().withMessage('Invalid fish ID'),
-//     ...fishFieldValidation
-//   ],
-//   catchAsync(async (req, res) => {
-//     const { _id } = req.body;
-//     const fish = await Fish.findById(_id);
-//     if (!fish) {throw new Error(`Fish with id ${_id} not found`)}
+exports.update = [
+  [
+    param('id').isMongoId().withMessage('Invalid fish ID'),
+    ...fishFieldValidation
+  ],
+  catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const data = req.body
+    data.updatedBy = req.user.email
+    
+    const fish = await Fish.findById({_id: id});
+    if (!fish) {
+      res.json({
+        success: false, 
+        message: `Fish with id ${id} not found`
+      })
+    } else {
+      await updateFish(fish, data);
+      await fish.save();
+      res.json({success: true})
+    }    
+  })
+];
 
-//     await updateFish(fish, req.body);
-//     await fish.save();
-//     res.json({success: true})
-//   })
-// ];
-
-// exports.delete = [
-//   [
-//     body('_id').isMongoId().withMessage('Invalid fish ID')
-//   ],
-//   catchAsync(async (req, res) => {
-//     const { _id } = req.body;
-//     const fish = await Fish.findOneAndDelete({ _id: _id});
-//     if (!fish) {throw new Error(`Fish with id ${_id} not found`)};
-//     res.json({success: true})
-//   })
-// ];
+exports.delete = [
+  [
+    param('id').isMongoId().withMessage('Invalid fish ID')
+  ],
+  catchAsync(async (req, res) => {
+    const { id } = req.params;
+    const fish = await Fish.findByIdAndDelete({_id: id});
+    if (!fish) {
+      res.json({
+        success: false, 
+        message: `Fish with id ${id} not found`
+      })
+    } else {
+      res.json({success: true})
+    }
+  })
+];

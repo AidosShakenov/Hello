@@ -1,21 +1,22 @@
 const express = require('express');
+
 const fishController = require('../controllers/fishController');
+const { protect } = require('../utils/authentication');
 
 const router = express.Router();
 
 router
   .route('/')
-  .get(fishController.list)
-  .post(fishController.getFishesByProps);
+  .post(fishController.list);
 
 router
-  .route('/id')
-  .post(fishController.get);
-//   .patch(fishController.update)
-//   .delete(fishController.delete);
+  .route('/:id')
+  .get(fishController.get)
+  .patch(protect, fishController.update)
+  .delete(protect, fishController.delete);
 
-// router
-//   .route('/new')
-//   .post(fishController.create);
+router
+  .route('/new')
+  .post(protect, fishController.create);
 
 module.exports = router;

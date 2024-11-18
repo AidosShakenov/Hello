@@ -3,6 +3,7 @@ const deckRouter = require('./routes/deckRoutes');
 const cardRouter = require('./routes/cardRoutes');
 const lakeRouter = require('./routes/lakeRoutes');
 const fishRouter = require('./routes/fishRoutes');
+const userRouter = require('./routes/userRoutes');
 const countriesRouter = require('./routes/countriesRoutes');
 const catchAsync = require("./utils/catchAsync");
 
@@ -39,6 +40,7 @@ router.use('/Decks', deckRouter);
 router.use('/Cards', cardRouter);
 router.use('/Lakes', lakeRouter);
 router.use('/Fishes', fishRouter);
+router.use('/Users', userRouter);
 
 router.get('/testAction',  catchAsync(async (req, res, next) => {
   res.json({success: true})

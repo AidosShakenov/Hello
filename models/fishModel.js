@@ -10,6 +10,12 @@ const fishSchema = new mongoose.Schema({
     type: Number,
     required: true    
   },
+  updatedBy: {
+    type: String
+  },
+  updatedAt: {
+    type: Date
+  },
   lakes: [{
     lakeId: {
       ref: 'lake',

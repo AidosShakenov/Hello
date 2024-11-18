@@ -89,7 +89,7 @@ exports.createDeck = [
     res.status(201).json({
       success: true,
       data: {
-        deckId: doc.id,
+        id: doc.id,
         name: doc.name,
         format: doc.format,
         created: doc.createdAt

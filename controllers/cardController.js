@@ -55,7 +55,7 @@ exports.newCard = [
       cards: cards.map(cards => ({
         name: cards.name,
         scryfallId: cards.id,
-        mongoId: cards.mongoId
+        id: cards.mongoId
       }))
     })
   })

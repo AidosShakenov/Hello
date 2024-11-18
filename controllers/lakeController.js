@@ -1,4 +1,4 @@
-const {body} = require('express-validator')
+const {body, param} = require('express-validator')
 
 const catchAsync = require("../utils/catchAsync");
 const Country = require('../models/countryModel');
@@ -13,7 +13,7 @@ exports.list = [
       lakesInDb: lakes.length, 
       lakes: lakes.map(lake => ({
         name: lake.name,        
-        lakeId: lake._id,
+        id: lake._id,
       }))
     })
   })
@@ -21,25 +21,24 @@ exports.list = [
 
 exports.get = [
   [
-    body('_id').isMongoId().withMessage('Invalid lake ID')
+    param('id').isMongoId().withMessage('Invalid lake ID')
   ],
   catchAsync(async (req, res) => {
-    const { _id } = req.body;
-    const lake = await Lake.findById(_id).populate('countries.countryId fishes.fishId');
-    if (!lake) {throw new Error(`Lake with id ${_id} not found`)}
+    const { id } = req.params;
+    const lake = await Lake.findById(id).populate('countries.countryId fishes.fishId');
+    if (!lake) {throw new Error(`Lake with id ${id} not found`)}
     res.json({
       success: true, 
       data: {
         name: lake.name,
-        _id: lake._id,
         area: lake.area,
         countries: lake.countries.map(country => ({
-          countryName: country.countryId.name,
-          countryId: country.countryId._id
+          name: country.countryId.name,
+          id: country.countryId._id
         })),
         fishes: lake.fishes.map(fish => ({
-          fishName: fish.fishId.name,
-          fishId: fish.fishId._id
+          name: fish.fishId.name,
+          id: fish.fishId._id
         }))}
     })
   })

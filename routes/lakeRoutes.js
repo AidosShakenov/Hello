@@ -8,8 +8,8 @@ router
   .get(lakeController.list);
 
 router
-  .route('/id')
-  .post(lakeController.get)
+  .route('/:id')
+  .get(lakeController.get)
 //   .patch(lakeController.update)
 //   .delete(lakeController.delete);
 
