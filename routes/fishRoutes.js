@@ -1,7 +1,7 @@
 const express = require('express');
 
 const fishController = require('../controllers/fishController');
-const { protect } = require('../utils/authentication');
+const { protect } = require('../controllers/userController');
 
 const router = express.Router();
 
